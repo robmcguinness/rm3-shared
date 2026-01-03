@@ -1,0 +1,31 @@
+{
+  "name": "@rm3/oxlint-config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared strict oxlint configuration object for rm3 repos",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@rm3/lint": "workspace:*",
+    "eslint-plugin-perfectionist": "^5.10.1"
+  },
+  "devDependencies": {
+    "@rm3/typescript-config": "workspace:*",
+    "@types/node": "^26.1.2",
+    "oxlint": "1.80.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "oxlint": "1.80.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2"
+  }
+}

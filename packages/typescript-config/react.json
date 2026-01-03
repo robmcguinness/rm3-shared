@@ -1,0 +1,4 @@
+{
+  "display": "legacy alias, remove after openmint migrates",
+  "extends": "./react-vite.json"
+}

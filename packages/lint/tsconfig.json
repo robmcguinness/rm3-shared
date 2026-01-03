@@ -1,0 +1,3 @@
+{
+  "extends": "@rm3/typescript-config/node-app.json"
+}

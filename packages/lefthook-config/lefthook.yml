@@ -1,0 +1,38 @@
+# Run all checks on demand with `pnpm lefthook run check --no-tty`.
+check:
+  parallel: true
+  jobs:
+    - name: check-format
+      run: pnpm run format:check
+    - name: check-lint
+      run: pnpm run lint --max-warnings 0
+    - name: check-types
+      run: pnpm run typecheck
+    - name: check-tests
+      run: pnpm run test
+
+# Hooks run on commit. Install them with `pnpm lefthook install`.
+pre-commit:
+  # Both jobs rewrite files, so run them one after the other.
+  parallel: false
+  jobs:
+    - name: oxfmt
+      glob: '*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc}'
+      run: pnpm exec oxfmt {staged_files}
+      stage_fixed: true
+
+    - name: oxlint
+      glob: '*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}'
+      run: pnpm exec oxlint --fix --max-warnings 0 {staged_files}
+      stage_fixed: true
+
+    # oxlint's jest and vitest plugins only recognise their own imports, so
+    # neither sees a focused `node:test` case. A stray `.only` silently skips
+    # the rest of the suite, so it is worth catching here.
+    - name: no-focused-tests
+      glob: '*.test.{ts,tsx}'
+      run: |
+        if grep -nE '\b(describe|test|it)\.only\(' {staged_files}; then
+          echo 'Remove .only before committing — it skips the rest of the suite.'
+          exit 1
+        fi

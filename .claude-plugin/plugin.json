@@ -1,0 +1,8 @@
+{
+  "name": "rm3",
+  "description": "A Claude plugin from RM3",
+  "version": "1.0.0",
+  "author": {
+    "name": "Rob McGuinness"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/env" },
+    { "path": "./packages/lint" },
+    { "path": "./packages/logger" },
+    { "path": "./packages/oxfmt-config" },
+    { "path": "./packages/oxlint-config" }
+  ]
+}

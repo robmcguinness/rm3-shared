@@ -1,0 +1,25 @@
+.DS_Store
+node_modules
+.fetch-skill-cache
+dist
+*.tsbuildinfo
+lefthook-local.yml
+
+# Local environment and credentials. Examples must contain placeholders only.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.npmrc
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Local agent settings, logs, and reports.
+.claude/settings.local.json
+*.log
+coverage/

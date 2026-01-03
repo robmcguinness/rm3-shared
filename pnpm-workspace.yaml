@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+
+blockExoticSubdeps: true
+
+# lefthook writes git hooks in its postinstall
+allowBuilds:
+  lefthook: true
+
+minimumReleaseAge: 1440
+
+trustPolicy: no-downgrade

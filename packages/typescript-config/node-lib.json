@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Node library (tsc -b emits declarations)",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "${configDir}/node_modules/.tmp/tsconfig.tsbuildinfo",
+
+    "target": "es2024",
+    "lib": [
+      "es2024",
+      "ESNext.Array",
+      "ESNext.Collection",
+      "ESNext.Error",
+      "ESNext.Iterator",
+      "ESNext.Promise"
+    ],
+
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": [],
+
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src",
+    "rewriteRelativeImportExtensions": true,
+
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "resolveJsonModule": true,
+    "noFallthroughCasesInSwitch": true,
+    "useDefineForClassFields": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["${configDir}/src/**/*"],
+  "exclude": ["${configDir}/**/node_modules", "${configDir}/**/dist"]
+}

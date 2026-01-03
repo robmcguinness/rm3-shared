@@ -1,0 +1,37 @@
+{
+  "name": "@rm3/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared TypeScript compiler presets for rm3 packages and apps",
+  "author": "Robert McGuinness",
+  "files": [
+    "node-app.json",
+    "node-lib.json",
+    "react-vite.json",
+    "vite-node.json",
+    "node24-apps.json",
+    "node24-libs.json",
+    "react.json"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./node-app.json",
+    "./node-app.json": "./node-app.json",
+    "./node-lib.json": "./node-lib.json",
+    "./react-vite.json": "./react-vite.json",
+    "./vite-node.json": "./vite-node.json",
+    "./node24-apps.json": "./node24-apps.json",
+    "./node24-libs.json": "./node24-libs.json",
+    "./react.json": "./react.json",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "@types/node": ">=22",
+    "typescript": ">=5.8.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/node": {
+      "optional": true
+    }
+  }
+}

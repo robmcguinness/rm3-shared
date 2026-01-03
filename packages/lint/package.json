@@ -1,0 +1,31 @@
+{
+  "name": "@rm3/lint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "imports": {
+    "#*": "./src/*"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "node --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@oxlint/plugins": "1.80.0"
+  },
+  "devDependencies": {
+    "@rm3/typescript-config": "workspace:*",
+    "@types/node": "^26.1.2",
+    "oxlint": "1.80.0",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "oxlint": "1.80.0"
+  }
+}
