@@ -18,7 +18,14 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `antiSlopRulesOff`           | the same keys at `off`, for generated or AST-walking code                                                                                                     |
 | `complexityRules`            | `complexity`, `max-depth`, `max-nested-callbacks`, `max-params`                                                                                               |
 | `reactPlugins`               | `['react', 'react-perf', 'jsx-a11y']` — add them in a React override                                                                                          |
-| `reactRulesOff`              | rules to disable over React source                                                                                                                            |
+| `reactRules`                 | `reactRulesOn` plus `reactRulesOff` — spread this over React source                                                                                           |
+| `reactRulesOn`               | React rules from the off `style`, `restriction` and `nursery` categories, opted in by name                                                                    |
+| `reactRulesOff`              | React rules turned off on purpose, each with a reason; still exported for older consumers                                                                     |
+| `reactDoctorJsPlugin`        | the `react-doctor` JS plugin entry — add it to the `jsPlugins` of the React override                                                                          |
+| `reactDoctorRules`           | react-doctor's framework-independent recommended rules, minus the ones oxlint already runs, plus `reactDoctorRulesOff`                                        |
+| `reactDoctorRulesOff`        | recommended react-doctor rules rm3 turns off, each restating a decision `rm3Config` already made                                                              |
+| `reactDoctorFrameworkRules`  | react-doctor's per-framework rules, keyed `nextjs`, `preact`, `react-native`, `tanstack-query`, `tanstack-start`                                              |
+| `reactDoctorCapabilityRules` | react-doctor rules gated on the environment, keyed `ssr`, `react-compiler`, `i18n` — spread after `reactDoctorRules`                                          |
 | `shadcnRulesOff`             | `antiSlopRulesOff` plus the style rules vendored shadcn primitives trip                                                                                       |
 
 `rm3Config.plugins` names universal plugins only. An explicit plugin list REPLACES oxlint's
@@ -32,7 +39,15 @@ the right answer differs per repo and per directory.
 ```ts
 // oxlint.config.ts
 import { defineConfig } from 'oxlint';
-import rm3Config, { reactPlugins, reactRulesOff, shadcnRulesOff } from '@rm3/oxlint-config';
+import rm3Config, {
+    reactDoctorCapabilityRules,
+    reactDoctorFrameworkRules,
+    reactDoctorJsPlugin,
+    reactDoctorRules,
+    reactPlugins,
+    reactRules,
+    shadcnRulesOff,
+} from '@rm3/oxlint-config';
 
 export default defineConfig({
     extends: [rm3Config],
@@ -41,7 +56,14 @@ export default defineConfig({
         {
             files: ['src/**/*.tsx'],
             plugins: [...reactPlugins],
-            rules: { ...reactRulesOff },
+            jsPlugins: [reactDoctorJsPlugin],
+            rules: {
+                ...reactRules,
+                ...reactDoctorRules,
+                // Only what the repo is; oxlint cannot read package.json for it.
+                ...reactDoctorFrameworkRules['tanstack-query'],
+                ...reactDoctorCapabilityRules.ssr,
+            },
         },
         {
             files: ['src/components/ui/**'],
@@ -52,9 +74,48 @@ export default defineConfig({
 });
 ```
 
+## react-doctor runs inside oxlint
+
+[react-doctor](https://www.react.doctor) ships its rules as an oxlint JS plugin,
+`oxlint-plugin-react-doctor`, so `pnpm lint` is the whole check: no second CLI, no second
+config file, no second hook. This package pins the plugin, resolves it from rm3-shared, and
+turns its rule registry into the two exports above:
+
+- `reactDoctorRules` is react-doctor's own recommended set at react-doctor's own severities.
+  It leaves out what cannot run or should not run under standalone oxlint: whole-project
+  rules and security scans (they need the CLI's tree walk and are no-ops in oxlint), rules
+  react-doctor itself ships disabled, and the 100 rules react-doctor ported from oxlint's
+  `react`, `react-perf` and `jsx-a11y` plugins. The Rust originals run under `reactPlugins`;
+  running both would report every finding twice.
+- `reactDoctorRulesOff` is spread last into `reactDoctorRules`. Each entry restates a decision
+  `rm3Config` already made for the matching oxlint rule (`no-multi-comp`, `complexity` in
+  `.tsx`, `max-lines-per-function`), so the two tools cannot disagree.
+- `reactDoctorFrameworkRules` holds the framework buckets. The CLI switches them on by
+  reading `package.json`; oxlint cannot, so a consumer spreads the buckets it needs.
+- `reactDoctorCapabilityRules` holds the rules the CLI gates on the environment rather than
+  on an import. A `zustand` rule only matches zustand code, so it can stay in the base set;
+  `react-compiler-no-manual-memoization` flags every `useMemo`, so it cannot. `ssr` adds the
+  hydration and browser-global rules, `react-compiler` adds the compiler rule and turns the
+  manual-memoization advice off, `i18n` adds the IME composition guard. The base set assumes
+  React 19: rules that need an older React are left out.
+
+Rules tagged `test-noise` skip `*.test.*`, `*.spec.*` and `__tests__/` files on their own.
+
+"oxlint owns a ported rule" has to mean oxlint runs it, or the rule is silent in both tools.
+`rm3Config` turns the `style`, `restriction` and `nursery` categories off, so `reactRules` names
+every ported rule from those categories by hand: on where it catches a bug or is a cheap autofix,
+off with a reason where it is a ban list or measures markup.
+
+`src/index.test.ts` checks both halves against the pinned tools. It recomputes the
+recommended-minus-ported split from `oxlint --rules --format=json` and the plugin's
+`RECOMMENDED_RULES`, then checks that every rule in that split is in `reactDoctorRules`, in a
+capability bucket, or off because it needs an older React. A bump on either side that adds,
+drops or re-levels a rule fails here rather than in a consumer. It then checks that each ported
+rule react-doctor recommends is in a category `rm3Config` turns on or is named in `reactRules`.
+
 ## jsPlugins resolve from here, not from you
 
-`rm3Config.jsPlugins` builds its specifiers with `import.meta.resolve`, evaluated inside this
-package. The paths therefore point into rm3-shared's own `node_modules`, which is what makes the
-config work through a `link:` symlink — a consumer does not need `eslint-plugin-perfectionist` or
-`@rm3/lint` installed.
+`rm3Config.jsPlugins` and `reactDoctorJsPlugin` build their specifiers with `import.meta.resolve`,
+evaluated inside this package. The paths therefore point into rm3-shared's own `node_modules`,
+which is what makes the config work through a `link:` symlink — a consumer does not need
+`eslint-plugin-perfectionist`, `oxlint-plugin-react-doctor` or `@rm3/lint` installed.

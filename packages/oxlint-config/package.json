@@ -12,9 +12,13 @@
     },
     "./package.json": "./package.json"
   },
+  "scripts": {
+    "test": "node --test 'src/**/*.test.ts'"
+  },
   "dependencies": {
     "@rm3/lint": "workspace:*",
-    "eslint-plugin-perfectionist": "^5.10.1"
+    "eslint-plugin-perfectionist": "^5.10.1",
+    "oxlint-plugin-react-doctor": "0.9.13"
   },
   "devDependencies": {
     "@rm3/typescript-config": "workspace:*",

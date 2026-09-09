@@ -2,8 +2,12 @@
 // rm3-shared's copy of oxlint into a consumer's process. `defineConfig` is
 // deliberately never CALLED here — the consumer calls it on its own oxlint.
 import type { OxlintConfig } from 'oxlint';
+import type { Capability, RuleFramework } from 'oxlint-plugin-react-doctor/core';
 
 import { antiSlopRules, antiSlopRulesOff, complexityRules } from '@rm3/lint';
+// The `core` entry is rule metadata only (31 ms to import); the root entry is
+// the plugin itself, which oxlint loads through `reactDoctorJsPlugin` below.
+import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
 export { antiSlopRules, antiSlopRulesOff, complexityRules };
 
@@ -13,6 +17,50 @@ export { antiSlopRules, antiSlopRulesOff, complexityRules };
  * oxlint's defaults, so a non-React repo must not pay for them.
  */
 export const reactPlugins = ['react', 'react-perf', 'jsx-a11y'] as const;
+
+/**
+ * React rules that `rm3Config.categories` would not turn on (they sit in
+ * `style`, `restriction` or `nursery`), opted in by name.
+ * react-doctor ships a JS port of each of these, and `reactDoctorRules` leaves
+ * every port off because oxlint's Rust rule is the one that runs. So oxlint has
+ * to run them or nothing does; `index.test.ts` fails when a rule react-doctor
+ * recommends is neither on by category nor named in `reactRules`.
+ */
+export const reactRulesOn = {
+  // --- bugs, promoted to error ---
+  // Pedantic in oxlint, so `warn` by category. A hook call inside a condition
+  // is never a preference; react-doctor also had it at error.
+  'react/rules-of-hooks': 'error',
+  // `class=`, `for=`, `onclick=`: the attribute silently does nothing.
+  'react/no-unknown-property': 'error',
+  // A `<button>` without `type` submits the enclosing form. Off over shadcn
+  // primitives in `shadcnRulesOff`; app code uses `<Button>` and is unaffected.
+  'react/button-has-type': 'error',
+  // `shouldComponentUpdate` on a `PureComponent` is dead code.
+  'react/no-redundant-should-component-update': 'error',
+  // --- nursery, so `warn` like `no-useless-assignment` below ---
+  'react/require-render-return': 'warn',
+  // --- a11y ---
+  // "click here" / "link" anchor text tells a screen reader nothing.
+  'jsx-a11y/anchor-ambiguous-text': 'warn',
+  // --- style: autofixable, one commit to adopt ---
+  'react/jsx-boolean-value': 'warn',
+  'react/jsx-curly-brace-presence': 'warn',
+  'react/jsx-fragments': 'warn',
+  'react/jsx-pascal-case': 'warn',
+  'react/self-closing-comp': 'warn',
+  // `const [x, setX]` naming for `useState`.
+  'react/hook-use-state': 'warn',
+  // --- class-component ratchets: no hits today, keep it that way ---
+  'react/no-set-state': 'warn',
+  'react/prefer-es6-class': 'warn',
+  // `allowComponentDidCatch` is on by default, so error boundaries still pass.
+  'react/prefer-function-component': 'warn',
+  'react/state-in-constructor': 'warn',
+  // Legacy APIs with modern replacements (render props, `props.children`).
+  'react/no-clone-element': 'warn',
+  'react/no-react-children': 'warn',
+} satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
  * The rules `reactRulesOff` turns off, named so the binding has an owner
@@ -26,10 +74,24 @@ type ReactRulesOff = {
   'react-perf/jsx-no-new-array-as-prop': 'off';
   'react-perf/jsx-no-new-function-as-prop': 'off';
   'react-perf/jsx-no-new-object-as-prop': 'off';
+  'react/forbid-component-props': 'off';
+  'react/forbid-dom-props': 'off';
+  'react/forbid-elements': 'off';
+  'react/jsx-filename-extension': 'off';
+  'react/jsx-handler-names': 'off';
+  'react/jsx-max-depth': 'off';
+  'react/jsx-props-no-spreading': 'off';
+  'react/no-danger': 'off';
+  'react/no-multi-comp': 'off';
+  'react/only-export-components': 'off';
   'react/react-in-jsx-scope': 'off';
 };
 
-/** Rules to turn off in a React override, keyed the way oxlint names them. */
+/**
+ * Rules to turn off in a React override, keyed the way oxlint names them.
+ * Spread into `reactRules`; every entry is a recorded decision, so the drift
+ * test in `index.test.ts` counts it as covered.
+ */
 export const reactRulesOff: ReactRulesOff = {
   // React 17+ JSX transform doesn't require React in scope
   'react/react-in-jsx-scope': 'off',
@@ -41,6 +103,210 @@ export const reactRulesOff: ReactRulesOff = {
   'react-perf/jsx-no-new-object-as-prop': 'off',
   // Generic Label component — htmlFor passed via props
   'jsx-a11y/label-has-associated-control': 'off',
+  // --- Named off so the drift test sees a decision, not a gap ---
+  // Default ban list is `className` and `style` on components. Every primitive
+  // in a shadcn-style codebase takes `className`.
+  'react/forbid-component-props': 'off',
+  // Ban lists with no default. rm3 has nothing to ban; a repo that does names
+  // it in its own override.
+  'react/forbid-dom-props': 'off',
+  'react/forbid-elements': 'off',
+  // TypeScript already rejects JSX in a `.ts` file.
+  'react/jsx-filename-extension': 'off',
+  // `handle*` / `on*` naming is a convention, not a bug.
+  'react/jsx-handler-names': 'off',
+  // Default depth is 2. Same reason `complexity` is off for `.tsx`: it
+  // measures markup, not logic.
+  'react/jsx-max-depth': 'off',
+  // `{...props}` forwarding is the primitive idiom.
+  'react/jsx-props-no-spreading': 'off',
+  // `dangerouslySetInnerHTML` carries trusted static content only (inline SVG,
+  // anti-FOUC theme script, chart CSS vars). Decision recorded in openmint.
+  'react/no-danger': 'off',
+  // Routes and feature files co-locate small helper components by design.
+  'react/no-multi-comp': 'off',
+  // TanStack route files export `Route` beside the component, and cva variants
+  // export beside theirs. Fast Refresh is not worth that noise.
+  'react/only-export-components': 'off',
+};
+
+/**
+ * Spread this into the React override. `reactRulesOff` wins on any key that
+ * appears in both, which is the point: a reasoned `off` beats an opt-in.
+ */
+export const reactRules = {
+  ...reactRulesOn,
+  ...reactRulesOff,
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
+ * The react-doctor JS plugin, resolved HERE like `perfectionist` so the pinned
+ * copy in rm3-shared/node_modules loads even through a `link:` symlink.
+ * Not in `rm3Config.jsPlugins`: a non-React repo would pay the plugin's load
+ * time for rules it never turns on. Put it in the `jsPlugins` of the same
+ * override that spreads `reactDoctorRules`.
+ */
+export const reactDoctorJsPlugin = {
+  name: 'react-doctor',
+  specifier: import.meta.resolve('oxlint-plugin-react-doctor'),
+} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
+
+/**
+ * react-doctor ports 100 rules from oxlint's own `react`, `react-perf` and
+ * `jsx-a11y` plugins and flags them `originallyExternal`. The Rust originals
+ * run under `reactPlugins`, so the ports stay off. These eight are the only
+ * other `originallyExternal` rules react-doctor recommends: they come from
+ * `eslint-plugin-react-you-might-not-need-an-effect`, which oxlint does not
+ * ship, so they stay on. `index.test.ts` recomputes the split from
+ * `oxlint --rules` and fails when a bump on either side moves a rule.
+ */
+const effectRuleIds: ReadonlySet<string> = new Set([
+  'no-adjust-state-on-prop-change',
+  'no-chain-state-updates',
+  'no-derived-state',
+  'no-event-handler',
+  'no-initialize-state',
+  'no-pass-data-to-parent',
+  'no-pass-live-state-to-parent',
+  'no-reset-all-state-on-prop-change',
+]);
+
+/**
+ * react-doctor's CLI reads `package.json` and gates each rule on what it finds
+ * (`requires` / `disabledWhen`). Standalone oxlint runs whatever is named, so
+ * this file answers the same questions by hand. Most gates need no answer: a
+ * `three` or `zustand` rule matches only that library's code, so it is silent
+ * everywhere else. These three name the *environment*, not an import, and
+ * their rules fire on ordinary code (`react-compiler` flags every `useMemo`).
+ * They are out of `reactDoctorRules`; a consumer spreads the matching bucket
+ * of `reactDoctorCapabilityRules` when the capability applies.
+ */
+const environmentCapabilities = ['i18n', 'react-compiler', 'ssr'] as const;
+
+type EnvironmentCapability = (typeof environmentCapabilities)[number];
+
+/**
+ * What every rm3 React repo has. `react:N` reads as "React N or newer", so a
+ * React 19 repo carries the 18 line too: `no-react-dom-deprecated-apis`
+ * (requires 18) stays on, `no-ref-callback-cleanup-before-react-19`
+ * (disabled when 19) goes off.
+ */
+const assumedCapabilities: ReadonlySet<Capability> = new Set<Capability>([
+  'react',
+  'react:18',
+  'react:19',
+  'react:19.2',
+]);
+
+type ReactDoctorEntry = (typeof REACT_DOCTOR_RULES)[number];
+
+type ReactDoctorRuleMap = Record<string, 'error' | 'off' | 'warn'>;
+
+/**
+ * Whether a rule can run, and should run, under standalone oxlint at all:
+ * scan and project rules need the CLI's whole-tree pass and are no-ops here;
+ * `defaultEnabled: false` and `opt-in` rules are off in the CLI too; and the
+ * oxlint ports are covered by `reactPlugins`.
+ */
+const runsHere = ({ id, originallyExternal, rule }: ReactDoctorEntry): boolean =>
+  rule.defaultEnabled !== false &&
+  !rule.isScanRule &&
+  rule.isProjectRule !== true &&
+  !(rule.tags ?? []).includes('opt-in') &&
+  (!originallyExternal || effectRuleIds.has(id));
+
+const isEnvironmentCapability = (capability: Capability): boolean =>
+  environmentCapabilities.some((environment) => environment === capability);
+
+const toRuleMap = (entries: ReactDoctorEntry[], severity?: 'off'): ReactDoctorRuleMap =>
+  Object.fromEntries(entries.map(({ key, rule }) => [key, severity ?? rule.severity]));
+
+/**
+ * react-doctor's recommended set for one framework at react-doctor's own
+ * severities, for a repo with `assumedCapabilities` and none of
+ * `environmentCapabilities`.
+ */
+const reactDoctorRulesFor = (framework: RuleFramework): ReactDoctorRuleMap =>
+  toRuleMap(
+    REACT_DOCTOR_RULES.filter(
+      (entry) =>
+        entry.rule.framework === framework &&
+        runsHere(entry) &&
+        !(entry.rule.requires ?? []).some(isEnvironmentCapability) &&
+        !(entry.rule.disabledWhen ?? []).some((capability) => assumedCapabilities.has(capability)),
+    ),
+  );
+
+/**
+ * The rules one environment capability switches on, plus the base rules it
+ * switches off, in one spreadable map.
+ */
+const reactDoctorCapabilityRulesFor = (capability: EnvironmentCapability) => {
+  const global = REACT_DOCTOR_RULES.filter(
+    (entry) => entry.rule.framework === 'global' && runsHere(entry),
+  );
+  return {
+    ...toRuleMap(global.filter((entry) => (entry.rule.requires ?? []).includes(capability))),
+    ...toRuleMap(
+      global.filter((entry) => (entry.rule.disabledWhen ?? []).includes(capability)),
+      'off',
+    ),
+  };
+};
+
+/**
+ * Recommended react-doctor rules that rm3 turns off. Each one restates a
+ * decision `rm3Config` already made for the matching oxlint rule, so the two
+ * tools cannot disagree about it.
+ */
+export const reactDoctorRulesOff = {
+  // Same decision as `complexity` off for `.tsx` in `rm3Config.overrides`:
+  // in a render body every `&&` and ternary is a display ladder, not control
+  // flow, so the count measures markup.
+  'react-doctor/no-high-complexity-react-function': 'off',
+  // Same decision as `max-lines-per-function` off: length says nothing useful.
+  'react-doctor/no-giant-component': 'off',
+  // Same decision as `react/no-multi-comp` in `reactRulesOff`: routes and
+  // feature files co-locate small helper components by design.
+  'react-doctor/no-multi-component-file': 'off',
+} satisfies ReactDoctorRuleMap;
+
+/**
+ * Framework-independent react-doctor rules. Spread into the React override
+ * next to `reactRules`, with `reactDoctorJsPlugin` in that override's
+ * `jsPlugins`. Rules tagged `test-noise` skip `*.test.*` and `__tests__/`
+ * files on their own, so no test override is needed.
+ */
+export const reactDoctorRules = Object.assign(reactDoctorRulesFor('global'), reactDoctorRulesOff);
+
+/**
+ * Framework-specific react-doctor rules, keyed by react-doctor's framework
+ * name. Spread the ones the repo uses, e.g.
+ * `...reactDoctorFrameworkRules['tanstack-query']`. react-doctor's CLI detects
+ * the framework from `package.json`; standalone oxlint cannot, so this is an
+ * explicit opt-in.
+ */
+export const reactDoctorFrameworkRules: Record<
+  Exclude<RuleFramework, 'global'>,
+  ReactDoctorRuleMap
+> = {
+  nextjs: reactDoctorRulesFor('nextjs'),
+  preact: reactDoctorRulesFor('preact'),
+  'react-native': reactDoctorRulesFor('react-native'),
+  'tanstack-query': reactDoctorRulesFor('tanstack-query'),
+  'tanstack-start': reactDoctorRulesFor('tanstack-start'),
+};
+
+/**
+ * Environment-specific react-doctor rules. Spread AFTER `reactDoctorRules`:
+ * `ssr` for a server-rendered app (TanStack Start, Next), `react-compiler`
+ * when the compiler is on (it also turns the manual-memoization rules off),
+ * `i18n` for an app that ships to CJK users (IME composition guards).
+ */
+export const reactDoctorCapabilityRules: Record<EnvironmentCapability, ReactDoctorRuleMap> = {
+  i18n: reactDoctorCapabilityRulesFor('i18n'),
+  'react-compiler': reactDoctorCapabilityRulesFor('react-compiler'),
+  ssr: reactDoctorCapabilityRulesFor('ssr'),
 };
 
 /**
@@ -64,6 +330,10 @@ export const shadcnRulesOff = {
   curly: 'off',
   eqeqeq: 'off',
   'react/no-array-index-key': 'off',
+  // shadcn `Button` omits `type` by design.
+  'react/button-has-type': 'off',
+  // shadcn `sidebar.tsx` names its `useState` pairs `[_open, _setOpen]`.
+  'react/hook-use-state': 'off',
   'typescript/array-type': 'off',
   // Hundreds of hits across the primitives. The prop and key order is upstream's.
   'perfectionist/sort-enums': 'off',
