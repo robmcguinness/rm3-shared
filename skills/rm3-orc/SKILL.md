@@ -1,6 +1,6 @@
 ---
 name: rm3-orc
-description: Orchestrates a multi-agent coding workflow across herdr tabs created by the `orc` fish command — one agent per tab by default, or a single 2x2 grid tab via `orc --layout grid`. The current session orchestrates, a coder agent implements, a reviewer agent reviews through hunk agent notes, and a hunk pane shows a live diff. Each role runs whatever model `orc --select` chose; the skill never assumes one. Triggers when the user invokes the rm3-orc skill, asks to orchestrate a plan across herdr panes, or mentions the orc workflow, coder/reviewer panes, or unit-of-work plans in ~/.agents/plans.
+description: Orchestrates a multi-agent coding workflow across herdr tabs created by the `orc` fish command — one agent per tab by default, or a single 2x2 grid tab via `orc --layout grid`. The current session orchestrates, a coder agent implements, a reviewer agent reviews through hunk agent notes, and a hunk pane shows a live diff. Each role runs whatever model `orc --select` chose; the skill never assumes one. Triggers when the user invokes the rm3-orc skill, asks to orchestrate a plan across herdr panes, or mentions the orc workflow, coder/reviewer panes, or unit-of-work plans in ~/.agents/plans. Plans with a short interview by default and uses the grilling skill only when the user asks to be grilled.
 metadata:
   tags: orchestration, herdr, hunk, planning
 ---
@@ -34,7 +34,10 @@ Set `ORC` to this skill's directory: `${CLAUDE_PLUGIN_ROOT}/skills/rm3-orc` when
 ## Phase 1 — Plan
 
 1. Explore the codebase from the user's prompt **before** the interview. Use at most **two** subagents, each with a distinct question, on the cheapest or fastest model your harness offers. If your harness has no subagents, explore directly. Use zero when the scope is a file or two you already know. Goal: know the files, patterns, and constraints the request touches, so the interview asks only what the code cannot answer.
-2. Interview the user about the goal with the **grilling** skill, grounded in what step 1 found. Do not skip this.
+2. Interview the user about the goal, grounded in what step 1 found. Two modes; the user's words pick the mode, never the code:
+   - **Lightweight (default).** One round, at most **three** questions, each with a recommended answer. Ask only what the code cannot answer: acceptance criteria, a choice between two valid designs, or a constraint the request left out. When step 1 answered everything, skip the round and state the assumptions under the description's **Constraints and decisions**.
+   - **Deep.** Load the **grilling** skill and run it to completion. Use this mode only when the user asks for it: any `grill` phrase (`grill me`, `grilling`, `grill this`), or a request for a deep discussion or a stress test of the plan. The request can come in the original prompt or as an answer during the lightweight round; in that case, switch to deep before writing plan files.
+   Never pick deep on your own. Ambiguity you find in lightweight mode is a question in the round, not a reason to escalate.
 3. Pick a codename: a short kebab-case description of the goal.
 4. Write the plan files in `~/.agents/plans/<repo>/<codename>/` from [references/plan-file-templates.md](references/plan-file-templates.md): `<codename>-description.md` with the units table listing every unit file (seed `Checklist` as `0/<N>`, `Status` as `pending`), and one `<codename>-unit-NN.md` per unit.
 5. Each unit is independently committable, has a task checklist, and has a `## Validation` section with the exact commands the coder runs. List `pnpm check` first when the repo defines a `check` script (its format, lint, typecheck and test group), then any targeted commands for the paths the unit touches. Include unit and integration tests when warranted. Show proposed changes as markdown diffs with inline comments that explain **why**.
@@ -83,6 +86,7 @@ Decisions you cannot make from the plan, the code, or the review: ask the user. 
 - A sentinel without the tag you issued is not a result. Never reuse a tag.
 - The unit file's `State` line, not its checkboxes, says where the loop is. Write it at every transition.
 - Two fix cycles per unit, then escalate. Two explorer subagents at most, planning only.
+- The interview is lightweight unless the user asks to be grilled. Never load the grilling skill on your own judgment.
 - The reviewer never runs lint, tests, or checks, and never reviews lockfiles or generated files. It judges the hand-written diff against the plan; the coder proves the checks pass.
 - Roles are names. A worker's kind decides only its reset command; never infer a kind from a name, and never send a reset command the script or the user did not give you.
 - Never follow `herdr agent prompt` with a standalone `herdr agent wait`; `turn.sh` is the only way to wait on a worker. When a wait is lost, recover on the **tagged sentinel**, never on agent state.

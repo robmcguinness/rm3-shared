@@ -21,11 +21,11 @@ Created: <YYYY-MM-DD>
 
 ## Goal
 
-<What the user wants and why, distilled from the grilling interview.>
+<What the user wants and why, distilled from the interview (lightweight round or grilling).>
 
 ## Constraints and decisions
 
-- <Decisions the user made during grilling, with the reason.>
+- <Decisions the user made during the interview, with the reason. In lightweight mode, also list the assumptions you made because the round was skipped or short.>
 - Reset: coder=<cmd>, reviewer=<cmd>   <!-- only when find-siblings.sh left a *_RESET empty
                                             and the user supplied the command; outranks the
                                             script value on resume -->

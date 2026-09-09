@@ -84,14 +84,14 @@ In the consumer's `package.json`:
    dependencies from _this_ repo's `node_modules`. Without an install here,
    those imports dangle. Which packages care:
 
-    | package                  | ships            | needs an install here                                                                                                    |
-    | ------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-    | `@rm3/typescript-config` | JSON presets     | no                                                                                                                       |
-    | `@rm3/lefthook-config`   | `lefthook.yml`   | no                                                                                                                       |
-    | `@rm3/oxfmt-config`      | `./src/index.ts` | no — its only `oxfmt` import is `import type`, erased at runtime                                                         |
-    | `@rm3/oxlint-config`     | `./src/index.ts` | **yes** — it imports `@rm3/lint` and `eslint-plugin-perfectionist` at runtime, and `@rm3/lint` imports `@oxlint/plugins` |
-    | `@rm3/env`               | `./src/index.ts` | **yes** — imports `zod`                                                                                                  |
-    | `@rm3/logger`            | `./src/index.ts` | **yes** — imports `pino` and `pino-pretty`                                                                               |
+    | package                  | ships            | needs an install here                                                                                       |
+    | ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+    | `@rm3/typescript-config` | JSON presets     | no                                                                                                          |
+    | `@rm3/lefthook-config`   | `lefthook.yml`   | no                                                                                                          |
+    | `@rm3/oxfmt-config`      | `./src/index.ts` | no — its only `oxfmt` import is `import type`, erased at runtime                                            |
+    | `@rm3/oxlint-config`     | `./src/index.ts` | **yes** — it imports `@rm3/lint`, `eslint-plugin-perfectionist` and `oxlint-plugin-react-doctor` at runtime |
+    | `@rm3/env`               | `./src/index.ts` | **yes** — imports `zod`                                                                                     |
+    | `@rm3/logger`            | `./src/index.ts` | **yes** — imports `pino` and `pino-pretty`                                                                  |
 
     Install unconditionally anyway: the tree is one `pnpm install` and the two
     config presets are usually linked next to `@rm3/oxlint-config`.
