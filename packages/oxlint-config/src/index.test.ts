@@ -1,3 +1,5 @@
+import type { AllowWarnDeny, DummyRule } from 'oxlint';
+
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { describe, it } from 'node:test';
@@ -16,8 +18,11 @@ import {
   reactDoctorCapabilityRules,
   reactDoctorFrameworkRules,
   reactDoctorJsPlugin,
+  reactDoctorOxlintCounterparts,
   reactDoctorRules,
+  reactDoctorRulesCoveredByOxlint,
   reactDoctorRulesOff,
+  reactPlugins,
   reactRules,
   rm3Config,
 } from './index.ts';
@@ -35,20 +40,36 @@ interface OxlintRuleListing {
 }
 
 /**
- * oxlint's React-plugin rules keyed by rule id. `pnpm run test` puts the
+ * All oxlint rules keyed by config name. `pnpm run test` puts the
  * package's `node_modules/.bin` on PATH, so the pinned oxlint is the one that
  * answers.
  */
-function readOxlintReactRules(): Map<string, OxlintRuleListing> {
+function readOxlintRules(): Map<string, OxlintRuleListing> {
   const stdout = execFileSync('oxlint', ['--rules', '--format=json'], { encoding: 'utf8' });
   // SAFETY: `oxlint --rules --format=json` prints an array of rule listings, and
   // the three fields read below have been stable since oxlint 1.0.
   const listing = JSON.parse(stdout) as OxlintRuleListing[];
 
   return new Map(
-    listing.filter((rule) => OXLINT_SCOPES.has(rule.scope)).map((rule) => [rule.value, rule]),
+    listing.map((rule) => [
+      rule.scope === 'eslint' ? rule.value : `${rule.scope.replaceAll('_', '-')}/${rule.value}`,
+      rule,
+    ]),
   );
 }
+
+const readOxlintReactRules = (): Map<string, OxlintRuleListing> =>
+  new Map(
+    [...readOxlintRules().values()]
+      .filter((rule) => OXLINT_SCOPES.has(rule.scope))
+      .map((rule) => [rule.value, rule]),
+  );
+
+const isRuleTuple = (setting: DummyRule): setting is [AllowWarnDeny, ...unknown[]] =>
+  Array.isArray(setting);
+
+const isOn = (value: AllowWarnDeny | undefined): boolean =>
+  value === 'warn' || value === 'error' || value === 1 || value === 2;
 
 const ruleId = (key: string): string => key.slice(REACT_DOCTOR_PREFIX.length);
 
@@ -82,7 +103,7 @@ describe('reactDoctorRules', () => {
     const expected = readRecommendedMinusPorted();
     for (const [key, severity] of Object.entries(reactDoctorRules)) {
       assert.ok(key in expected, `${key} is not recommended, or oxlint already runs it`);
-      if (!(key in reactDoctorRulesOff)) {
+      if (!(key in reactDoctorRulesOff) && !(key in reactDoctorRulesCoveredByOxlint)) {
         assert.equal(severity, expected[key], `${key} severity drifted from react-doctor`);
       }
     }
@@ -198,5 +219,66 @@ describe('reactRules', () => {
       const id = oxlintKey.slice(oxlintKey.indexOf('/') + 1);
       assert.ok(oxlintRules.has(id), `${oxlintKey} is not an oxlint rule`);
     }
+  });
+});
+
+describe('rm3Config', () => {
+  it('includes every React plugin and react-doctor by default', () => {
+    for (const plugin of reactPlugins) {
+      assert.ok(rm3Config.plugins?.includes(plugin), `${plugin} is missing`);
+    }
+    assert.equal(reactDoctorJsPlugin.name, 'react-doctor');
+    assert.ok(rm3Config.jsPlugins?.includes(reactDoctorJsPlugin));
+  });
+
+  it('includes the React and react-doctor rules without shadowing decisions', () => {
+    for (const rules of [reactRules, reactDoctorRules]) {
+      assert.deepEqual(
+        Object.fromEntries(Object.keys(rules).map((key) => [key, rm3Config.rules?.[key]])),
+        rules,
+      );
+    }
+  });
+});
+
+describe('reactDoctorRulesCoveredByOxlint', () => {
+  it('turns off only recommended rules', () => {
+    for (const [key, severity] of Object.entries(reactDoctorRulesCoveredByOxlint)) {
+      assert.equal(severity, 'off');
+      assert.equal(reactDoctorRules[key], 'off');
+      assert.ok(key in RECOMMENDED_RULES, `${key} is not recommended`);
+    }
+  });
+
+  it('keeps every oxlint counterpart enabled', () => {
+    const listings = readOxlintRules();
+    for (const [doctorKey, oxlintKey] of Object.entries(reactDoctorOxlintCounterparts)) {
+      const listing = listings.get(oxlintKey);
+      assert.ok(listing, `${doctorKey} counterpart ${oxlintKey} does not exist`);
+      // eslint's core rules are always available; only other scopes need a plugin.
+      assert.ok(
+        listing.scope === 'eslint' ||
+          rm3Config.plugins?.some((plugin) => plugin === listing.scope.replaceAll('_', '-')),
+        `${oxlintKey} plugin is not enabled`,
+      );
+      const setting = rm3Config.rules?.[oxlintKey];
+      const severity = setting !== undefined && isRuleTuple(setting) ? setting[0] : setting;
+      const category = Object.entries<AllowWarnDeny>({ ...rm3Config.categories }).find(
+        ([name]) => name === listing.category,
+      )?.[1];
+      assert.ok(
+        severity === undefined ? isOn(category) : isOn(severity),
+        `${doctorKey} is off but ${oxlintKey} is not enabled`,
+      );
+    }
+  });
+
+  it('mirrors the no-await-in-loop decision', () => {
+    assert.equal(
+      rm3Config.rules?.['no-await-in-loop'],
+      'off',
+      'Move react-doctor/async-await-in-loop out of reactDoctorRulesOff if rm3 turns no-await-in-loop back on',
+    );
+    assert.equal(reactDoctorRulesOff['react-doctor/async-await-in-loop'], 'off');
   });
 });

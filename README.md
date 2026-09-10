@@ -102,6 +102,8 @@ In the consumer's `package.json`:
 3. **Check out the sibling in CI**, or switch those deps to git URLs. A `link:`
    path has no registry fallback.
 
+React and react-doctor are on by default in `rm3Config`.
+
 Then in the consumer:
 
 ```ts

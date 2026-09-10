@@ -12,9 +12,9 @@ import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 export { antiSlopRules, antiSlopRulesOff, complexityRules };
 
 /**
- * Plugins a React consumer adds in an override over its React source tree.
- * They are not in `rm3Config.plugins`: an explicit plugin list REPLACES
- * oxlint's defaults, so a non-React repo must not pay for them.
+ * React plugins already in `rm3Config.plugins`. Exported for consumer
+ * overrides that set their own `plugins`, which replaces the base list,
+ * and must add React back.
  */
 export const reactPlugins = ['react', 'react-perf', 'jsx-a11y'] as const;
 
@@ -88,7 +88,7 @@ type ReactRulesOff = {
 };
 
 /**
- * Rules to turn off in a React override, keyed the way oxlint names them.
+ * React rules turned off on purpose; part of `rm3Config.rules` via `reactRules`.
  * Spread into `reactRules`; every entry is a recorded decision, so the drift
  * test in `index.test.ts` counts it as covered.
  */
@@ -131,7 +131,8 @@ export const reactRulesOff: ReactRulesOff = {
 };
 
 /**
- * Spread this into the React override. `reactRulesOff` wins on any key that
+ * Already spread into `rm3Config.rules`; exported for overrides that redefine
+ * `plugins` and for the test. `reactRulesOff` wins on any key that
  * appears in both, which is the point: a reasoned `off` beats an opt-in.
  */
 export const reactRules = {
@@ -142,9 +143,8 @@ export const reactRules = {
 /**
  * The react-doctor JS plugin, resolved HERE like `perfectionist` so the pinned
  * copy in rm3-shared/node_modules loads even through a `link:` symlink.
- * Not in `rm3Config.jsPlugins`: a non-React repo would pay the plugin's load
- * time for rules it never turns on. Put it in the `jsPlugins` of the same
- * override that spreads `reactDoctorRules`.
+ * Already in `rm3Config.jsPlugins`; loading costs ~140 ms once per run.
+ * The `js-*` rules are generic JS perf checks that earn it in Node code too.
  */
 export const reactDoctorJsPlugin = {
   name: 'react-doctor',
@@ -246,13 +246,34 @@ const reactDoctorCapabilityRulesFor = (capability: EnvironmentCapability) => {
     (entry) => entry.rule.framework === 'global' && runsHere(entry),
   );
   return {
-    ...toRuleMap(global.filter((entry) => (entry.rule.requires ?? []).includes(capability))),
+    ...toRuleMap(global.filter((entry) => new Set(entry.rule.requires).has(capability))),
     ...toRuleMap(
-      global.filter((entry) => (entry.rule.disabledWhen ?? []).includes(capability)),
+      global.filter((entry) => new Set(entry.rule.disabledWhen).has(capability)),
       'off',
     ),
   };
 };
+
+/**
+ * react-doctor rules that re-implement a check oxlint already runs under
+ * `rm3Config`. The Rust rule reports it, so the port is off; the value names
+ * the oxlint rule that owns it, and `index.test.ts` fails if that rule is not
+ * on. Partial overlaps stay on and are only noted here: `js-set-map-lookups`
+ * (unicorn/prefer-set-has covers `.includes` on a constant array, not the
+ * lookup-in-loop shape) and `no-mutating-array-method-on-prop-or-hook-result`
+ * (unicorn/no-array-sort covers `.sort()` only, not `.reverse()`/`.splice()`).
+ */
+export const reactDoctorOxlintCounterparts = {
+  // Both flag `[...a].sort()` and offer the same `toSorted()` fix.
+  'react-doctor/js-tosorted-immutable': 'unicorn/no-array-sort',
+  'react-doctor/no-array-index-as-key': 'react/no-array-index-key',
+  'react-doctor/no-eval': 'no-eval',
+  'react-doctor/no-spread-accumulator-in-reduce': 'oxc/no-accumulating-spread',
+} as const satisfies Record<string, string>;
+
+export const reactDoctorRulesCoveredByOxlint: ReactDoctorRuleMap = Object.fromEntries(
+  Object.keys(reactDoctorOxlintCounterparts).map((key) => [key, 'off' as const]),
+);
 
 /**
  * Recommended react-doctor rules that rm3 turns off. Each one restates a
@@ -260,6 +281,9 @@ const reactDoctorCapabilityRulesFor = (capability: EnvironmentCapability) => {
  * tools cannot disagree about it.
  */
 export const reactDoctorRulesOff = {
+  // Same decision as `no-await-in-loop` off in `rm3Config.rules`:
+  // react-doctor's copy would quietly re-enable it.
+  'react-doctor/async-await-in-loop': 'off',
   // Same decision as `complexity` off for `.tsx` in `rm3Config.overrides`:
   // in a render body every `&&` and ternary is a display ladder, not control
   // flow, so the count measures markup.
@@ -272,12 +296,15 @@ export const reactDoctorRulesOff = {
 } satisfies ReactDoctorRuleMap;
 
 /**
- * Framework-independent react-doctor rules. Spread into the React override
- * next to `reactRules`, with `reactDoctorJsPlugin` in that override's
- * `jsPlugins`. Rules tagged `test-noise` skip `*.test.*` and `__tests__/`
+ * Framework-independent react-doctor rules, part of `rm3Config.rules`.
+ * Rules tagged `test-noise` skip `*.test.*` and `__tests__/`
  * files on their own, so no test override is needed.
  */
-export const reactDoctorRules = Object.assign(reactDoctorRulesFor('global'), reactDoctorRulesOff);
+export const reactDoctorRules = Object.assign(
+  reactDoctorRulesFor('global'),
+  reactDoctorRulesCoveredByOxlint,
+  reactDoctorRulesOff,
+);
 
 /**
  * Framework-specific react-doctor rules, keyed by react-doctor's framework
@@ -334,6 +361,16 @@ export const shadcnRulesOff = {
   'react/button-has-type': 'off',
   // shadcn `sidebar.tsx` names its `useState` pairs `[_open, _setOpen]`.
   'react/hook-use-state': 'off',
+  // Upstream `chart.tsx` uses separate filter/map passes.
+  'react-doctor/js-combine-iterations': 'off',
+  // Upstream `chart.tsx` imports recharts directly.
+  'react-doctor/prefer-dynamic-import': 'off',
+  // Upstream `chart.tsx` memoizes before its early return.
+  'react-doctor/rerender-memo-before-early-return': 'off',
+  // Upstream `progress.tsx` uses transition-all.
+  'react-doctor/no-transition-all': 'off',
+  // Vendored `sidebar.tsx` reads a browser global during render.
+  'react-doctor/no-hydration-branch-on-browser-global': 'off',
   'typescript/array-type': 'off',
   // Hundreds of hits across the primitives. The prop and key order is upstream's.
   'perfectionist/sort-enums': 'off',
@@ -381,6 +418,7 @@ export const rm3Config: OxlintConfig = {
       name: 'anti-slop',
       specifier: import.meta.resolve('@rm3/lint'),
     },
+    reactDoctorJsPlugin,
   ],
   options: {
     // tsgolint type-aware rules, plus TypeScript compiler diagnostics. Both are
@@ -423,11 +461,12 @@ export const rm3Config: OxlintConfig = {
       },
     },
   ],
-  // Universal plugins only; React lives in a consumer-side override.
+  // React is on for every file: react, react-perf and jsx-a11y rules only
+  // match JSX and hook calls, so a Node file pays nothing.
   // An explicit list REPLACES oxlint's defaults, so `typescript`, `unicorn`,
   // and `oxc` must be named here or they are silently dropped — and with
   // `typescript` gone, every type-aware rule stops running.
-  plugins: ['typescript', 'unicorn', 'oxc', 'import', 'node', 'promise'],
+  plugins: ['typescript', 'unicorn', 'oxc', 'import', 'node', 'promise', ...reactPlugins],
   rules: {
     // Would require readonly-wrapping nearly every React prop and Node option
     // object. Many hits, none of them bugs.
@@ -582,6 +621,10 @@ export const rm3Config: OxlintConfig = {
     // `{ null: 'ignore' }` keeps `x == null` as the null-or-undefined check.
     eqeqeq: ['error', 'always', { null: 'ignore' }],
     'no-throw-literal': 'error',
+
+    // --- React and react-doctor (on for every file) ---
+    ...reactRules,
+    ...reactDoctorRules,
   },
 };
 
