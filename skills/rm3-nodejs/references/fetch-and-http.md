@@ -1,12 +1,12 @@
 # Fetch API & HTTP Patterns
 
+> Manual AbortController timeouts and custom error classes are covered by the global `node` skill. Load it alongside this one.
+
 ## Contents
 - [Fetch with Timeout](#fetch-with-timeout)
-- [Manual AbortController](#manual-abortcontroller)
 - [Combining Abort Signals](#combining-abort-signals)
 - [Retry with Exponential Backoff](#retry-with-exponential-backoff)
 - [Streaming Response Bodies](#streaming-response-bodies)
-- [Error Handling Pattern](#error-handling-pattern)
 
 ---
 
@@ -23,22 +23,6 @@ async function fetchJson<T>(url: string, timeoutMs = 5000): Promise<T> {
   }
 
   return response.json() as Promise<T>;
-}
-```
-
----
-
-## Manual AbortController
-
-```typescript
-const controller = new AbortController();
-setTimeout(() => controller.abort(), 10000); // Auto-cancel after 10s
-
-try {
-  const response = await fetch(url, { signal: controller.signal });
-  const data = await response.json();
-} catch (err) {
-  if (err.name === 'AbortError') console.log('Request cancelled');
 }
 ```
 
@@ -151,24 +135,4 @@ async function* streamSSE(url: string, signal?: AbortSignal) {
     }
   }
 }
-```
-
----
-
-## Error Handling Pattern
-
-```typescript
-class AppError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode = 500,
-    public context: Record<string, unknown> = {}
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
-
-throw new AppError('Connection failed', 'DB_ERROR', 503, { host: 'localhost' });
 ```

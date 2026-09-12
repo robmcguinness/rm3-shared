@@ -8,7 +8,7 @@
 - [Event to Iterator Conversion](#event-to-iterator-conversion)
 - [Timers Promises API](#timers-promises-api)
 
-> Basic async/await patterns (Promise.all, Promise.allSettled, p-limit concurrency, AbortController, factory functions) are covered by the `node-best-practices` skill.
+> Basic async/await patterns (Promise.all, Promise.allSettled, p-limit concurrency, AbortController, factory functions) and async generators as stream transforms are covered by the global `node` skill. Load it alongside this one.
 
 ---
 

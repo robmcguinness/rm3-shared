@@ -1,6 +1,6 @@
 # Worker Threads
 
-> Stream pipelines (pipeline(), async generators as transforms, backpressure, Readable.from, stream consumers) are covered by the `node-best-practices` skill.
+> Stream pipelines (pipeline(), async generators as transforms, backpressure, Readable.from, stream consumers) are covered by the global `node` skill. Load it alongside this one.
 
 ---
 

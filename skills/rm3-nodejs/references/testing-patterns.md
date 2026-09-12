@@ -11,7 +11,7 @@
 - [Dynamic Test Generation](#dynamic-test-generation)
 - [Test Setup Organization](#test-setup-organization)
 
-> Basic test structure (describe/test, lifecycle hooks, running tests, test isolation) is covered by the `node-best-practices` skill.
+> Basic test structure (describe/test, lifecycle hooks, running tests, coverage, watch mode, test isolation), `t.mock.fn`, `t.mock.method`, and basic `t.assert.snapshot` usage are covered by the global `node` skill. Load it alongside this one.
 
 ---
 
@@ -134,25 +134,6 @@ beforeEach(async () => {
 
 ## Function Mocking
 
-### Basic Function Mock
-
-```typescript
-import { test, mock } from 'node:test';
-import assert from 'node:assert/strict';
-
-test('function mock', () => {
-  const mockFn = mock.fn<(a: number, b: number) => number>();
-
-  mockFn.mock.mockImplementation((a, b) => a + b);
-
-  const result = mockFn(2, 3);
-
-  assert.strictEqual(result, 5);
-  assert.strictEqual(mockFn.mock.callCount(), 1);
-  assert.deepStrictEqual(mockFn.mock.calls[0].arguments, [2, 3]);
-});
-```
-
 ### Mock Implementation Per Call
 
 ```typescript
@@ -167,26 +148,6 @@ test('different implementations', () => {
   assert.strictEqual(mockFn(), 'second');
   assert.strictEqual(mockFn(), 'default');
   assert.strictEqual(mockFn(), 'default');
-});
-```
-
-### Spying on Object Methods
-
-```typescript
-test('spy on method', () => {
-  const obj = {
-    greet(name: string) {
-      return `Hello, ${name}`;
-    }
-  };
-
-  const spy = mock.method(obj, 'greet');
-
-  const result = obj.greet('World');
-
-  assert.strictEqual(result, 'Hello, World');
-  assert.strictEqual(spy.mock.callCount(), 1);
-  assert.deepStrictEqual(spy.mock.calls[0].arguments, ['World']);
 });
 ```
 
@@ -334,20 +295,6 @@ test('debounced function', () => {
 ## Snapshot Testing
 
 Enable with `--experimental-test-snapshots`. Run with `--test-update-snapshots` to update.
-
-### Basic Snapshot
-
-```typescript
-import { test, describe } from 'node:test';
-
-describe('Component', () => {
-  test('renders correctly', (t) => {
-    const output = renderComponent({ title: 'Hello' });
-
-    t.assert.snapshot(output);
-  });
-});
-```
 
 ### Custom Snapshot Path
 

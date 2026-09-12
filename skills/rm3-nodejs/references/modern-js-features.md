@@ -5,6 +5,7 @@
 - [structuredClone()](#structuredclone)
 - [Iterator Helpers](#iterator-helpers)
 - [Set Operations](#set-operations)
+- [Explicit Resource Management](#explicit-resource-management)
 
 ---
 
