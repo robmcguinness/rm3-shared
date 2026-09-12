@@ -1,8 +1,7 @@
 import { memberPropertyName, objectPropertyName } from '#shared/global-binding.ts';
+import { isFunctionNode, type FunctionNode } from '#shared/functions.ts';
 
 import type { ESTree } from '@oxlint/plugins';
-
-export type FunctionNode = ESTree.ArrowFunctionExpression | ESTree.Function;
 
 /** Route-registering methods on a Fastify instance. */
 export const ROUTE_METHODS: ReadonlySet<string> = new Set([
@@ -60,14 +59,6 @@ const HANDLER_PROPERTIES: ReadonlySet<string> = new Set([
 
 /** A parameter annotated with one of these is a Fastify handler wherever it lives. */
 const FASTIFY_PARAMETER_TYPES: ReadonlySet<string> = new Set(['FastifyReply', 'FastifyRequest']);
-
-export function isFunctionNode(node: ESTree.Node): node is FunctionNode {
-  return (
-    node.type === 'ArrowFunctionExpression' ||
-    node.type === 'FunctionDeclaration' ||
-    node.type === 'FunctionExpression'
-  );
-}
 
 /** The nearest function the node sits in, or null at module level. */
 export function enclosingFunction(node: ESTree.Node): FunctionNode | null {

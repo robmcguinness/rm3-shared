@@ -16,6 +16,10 @@ tester.run('rm3-node/prefer-err-log-key', preferErrLogKeyRule, {
     { code: "log.error({ error: result.error }, 'x');", errors: [error] },
     { code: "log.error({ error: toError(cause) }, 'x');", errors: [error] },
     { code: "fastify.log.info({ error }, 'x');", errors: [error] },
+    { code: "getLog().warn({ error }, 'x');", errors: [error] },
+    { code: "getLogger(ctx).error({ error }, 'x');", errors: [error] },
+    { code: "(getLogger(ctx) ?? logger).error({ error }, 'x');", errors: [error] },
+    { code: "(logger || getLogger(ctx)).error({ error }, 'x');", errors: [error] },
   ],
   valid: [
     "logger.error({ err: error }, 'failed to start server');",
@@ -33,5 +37,8 @@ tester.run('rm3-node/prefer-err-log-key', preferErrLogKeyRule, {
     'metrics.error({ error });',
     "logger.child({ error }).info('x');",
     "log.info({ nested: { error } }, 'x');",
+    "getLog().warn({ err: error }, 'x');",
+    'getConfig().error({ error });',
+    '(a && logger).error({ error });',
   ],
 });

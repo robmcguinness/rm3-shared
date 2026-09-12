@@ -1,10 +1,7 @@
 import { defineRule } from '@oxlint/plugins';
 
-import {
-  enclosingFunction,
-  isFastifyHandler,
-  type FunctionNode,
-} from '#shared/fastify-handlers.ts';
+import { enclosingFunction, isFastifyHandler } from '#shared/fastify-handlers.ts';
+import type { FunctionNode } from '#shared/functions.ts';
 import { memberPropertyName, resolveVariable } from '#shared/global-binding.ts';
 
 import type { ESTree, SourceCode } from '@oxlint/plugins';

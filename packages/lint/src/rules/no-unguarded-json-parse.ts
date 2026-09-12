@@ -1,16 +1,9 @@
 import { defineRule } from '@oxlint/plugins';
 
+import { isFunctionNode } from '#shared/functions.ts';
 import { isGlobalIdentifier, memberPropertyName } from '#shared/global-binding.ts';
 
 import type { ESTree } from '@oxlint/plugins';
-
-function isFunctionBoundary(node: ESTree.Node): boolean {
-  return (
-    node.type === 'ArrowFunctionExpression' ||
-    node.type === 'FunctionDeclaration' ||
-    node.type === 'FunctionExpression'
-  );
-}
 
 /**
  * Whether the call sits inside the `try` block of a `try` statement in the
@@ -25,7 +18,7 @@ function isInsideTryBlock(node: ESTree.CallExpression): boolean {
       if (current.block === child) {
         return true;
       }
-    } else if (isFunctionBoundary(current)) {
+    } else if (isFunctionNode(current)) {
       return false;
     }
     child = current;

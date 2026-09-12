@@ -54,8 +54,9 @@ has no `no-restricted-syntax`). Kept apart from `anti-slop` so `antiSlopRulesOff
 | `no-log-string-interpolation` | A log message built with `${}` or `+` (`log.info(\`user ${id} created\`)`), in the first or, after a fields object, the second argument. Constant templates and pino's `%s` placeholders pass.                                                 |
 
 The two log rules match pino-shaped calls only: a level method (`trace`..`fatal`) on `x.log`
-(`request.log`, `app.log`, `this.log`) or on a bare `log` / `logger`. `console.*` and a `.child()`
-result are not matched.
+(`request.log`, `app.log`, `this.log`), a bare `log` / `logger`, or a `getLog()` / `getLogger(ctx)`
+call. A `??` / `||` between any of those logger shapes is also matched. `console.*` and a
+`.child()` result are not matched.
 
 `src/tailwind.ts` (the `@rm3/lint/tailwind` export) is a third plugin, `rm3-tailwind`, for the two
 practices in `skills/rm3-tailwind` a linter can check from class strings alone. Also kept apart from

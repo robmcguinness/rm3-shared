@@ -2,12 +2,12 @@ import { defineRule } from '@oxlint/plugins';
 
 import {
   HOOK_SIGNATURES,
-  isFunctionNode,
   isObjectProperty,
   routeOptionName,
   runtimeParameterCount,
   stringArgument,
 } from '#shared/fastify-handlers.ts';
+import { isFunctionNode } from '#shared/functions.ts';
 import { memberPropertyName } from '#shared/global-binding.ts';
 
 import type { Context, ESTree } from '@oxlint/plugins';
