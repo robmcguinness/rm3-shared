@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, test } from 'node:test';
 
 import { createLogger, REDACT_PATHS, resolveRedactPaths, type DestinationStream } from './index.ts';
 
@@ -47,7 +47,7 @@ function capture(): Capture {
 }
 
 describe('createLogger', () => {
-  it('stamps every line with the service base field', () => {
+  test('stamps every line with the service base field', () => {
     const sink = capture();
     const log = createLogger({ pretty: false, service: 'x' }, sink.stream);
 
@@ -61,7 +61,7 @@ describe('createLogger', () => {
     }
   });
 
-  it('omits the service key when no service is given', () => {
+  test('omits the service key when no service is given', () => {
     const sink = capture();
     const log = createLogger({ pretty: false }, sink.stream);
 
@@ -72,7 +72,7 @@ describe('createLogger', () => {
     assert.ok(!('service' in line));
   });
 
-  it('censors redacted paths', () => {
+  test('censors redacted paths', () => {
     const sink = capture();
     const log = createLogger({ pretty: false }, sink.stream);
 
@@ -83,7 +83,7 @@ describe('createLogger', () => {
     assert.equal(line.user?.password, '[redacted]');
   });
 
-  it('merges extra redact paths with the baseline', () => {
+  test('merges extra redact paths with the baseline', () => {
     const sink = capture();
     const log = createLogger({ pretty: false, redactPaths: ['token'] }, sink.stream);
 
@@ -96,7 +96,7 @@ describe('createLogger', () => {
     assert.equal(line.user?.password, '[redacted]');
   });
 
-  it('lists the baseline first and drops duplicate extras', () => {
+  test('lists the baseline first and drops duplicate extras', () => {
     const paths = resolveRedactPaths(['*.token', 'x']);
 
     assert.deepEqual(paths.slice(0, REDACT_PATHS.length), REDACT_PATHS);

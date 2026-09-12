@@ -37,6 +37,22 @@ Everything else is byte-identical rule logic to upstream, modulo the formatting 
   plugin against its own source (which inspects ASTs with `typeof` and `unknown` by necessity) and
   against vendored shadcn primitives.
 
+`src/node.ts` (the `@rm3/lint/node` export) is a second plugin, `rm3-node`, written here rather
+than vendored. It holds Node runtime rules for patterns oxlint has no built-in rule for (oxlint
+has no `no-restricted-syntax`). Kept apart from `anti-slop` so `antiSlopRulesOff` leaves it on.
+
+- `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-node` jsPlugin
+  by `@rm3/oxlint-config`.
+- `nodeCustomRules` — the three rules at `error`.
+
+| rule                        | reports                                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefer-timers-promises`    | `new Promise((resolve) => setTimeout(resolve, ms))` and the `setImmediate` form. `node:timers/promises` returns the promise and takes an `AbortSignal`.         |
+| `no-unguarded-json-parse`   | `JSON.parse(...)` with no enclosing `try` block in the same function. A schema `safeParse` on the result does not catch the `SyntaxError`. Off in `*.test.ts`.  |
+| `no-manual-signal-handlers` | `process.on` / `once` / `addListener` for `SIGTERM`, `SIGINT`, `SIGHUP`, `uncaughtException`, `unhandledRejection`, on the global or the `node:process` import. |
+
+Each rule has a co-located `*.test.ts` driven by `RuleTester` from `oxlint/plugins-dev`.
+
 This package is source-only: `exports` points straight at `./src/index.ts`, no build step, no
 `dist`. Oxlint's plugin loader does a plain `await import(url)`, which resolves under Node's
 built-in TypeScript type stripping.

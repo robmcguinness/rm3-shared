@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, test } from 'node:test';
 
 import { z } from 'zod';
 
@@ -30,7 +30,7 @@ function makeTmpDir(prefix: string): Promise<string> {
 }
 
 describe('createEnv', () => {
-  it('returns a frozen object with coerced values', () => {
+  test('returns a frozen object with coerced values', () => {
     process.env.RM3_PORT = '3000';
     process.env.RM3_DEBUG = 'true';
 
@@ -48,7 +48,7 @@ describe('createEnv', () => {
     assert.ok(Object.isFrozen(env));
   });
 
-  it('throws an error listing each failing key', () => {
+  test('throws an error listing each failing key', () => {
     delete process.env.RM3_MISSING_A;
     delete process.env.RM3_MISSING_B;
 
@@ -75,7 +75,7 @@ describe('createEnv', () => {
 });
 
 describe('findWorkspaceRoot', () => {
-  it('walks up to the directory holding pnpm-workspace.yaml', async () => {
+  test('walks up to the directory holding pnpm-workspace.yaml', async () => {
     const root = await makeTmpDir('rm3-env-root-');
     const nested = path.join(root, 'packages', 'app');
     await mkdir(nested, { recursive: true });
@@ -84,7 +84,7 @@ describe('findWorkspaceRoot', () => {
     assert.equal(findWorkspaceRoot(nested), root);
   });
 
-  it('returns start when there is no workspace root above it', async () => {
+  test('returns start when there is no workspace root above it', async () => {
     const start = await makeTmpDir('rm3-env-orphan-');
 
     assert.equal(findWorkspaceRoot(start), start);
@@ -92,7 +92,7 @@ describe('findWorkspaceRoot', () => {
 });
 
 describe('loadEnv', () => {
-  it('reads the root .env without overwriting an already-set variable', async () => {
+  test('reads the root .env without overwriting an already-set variable', async () => {
     const root = await makeTmpDir('rm3-env-load-');
     await writeFile(path.join(root, 'pnpm-workspace.yaml'), 'packages:\n');
     await writeFile(path.join(root, '.env'), 'RM3_FROM_FILE=file\nRM3_PRESET=file\n');

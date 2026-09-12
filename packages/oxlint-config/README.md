@@ -29,6 +29,13 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `reactDoctorFrameworkRules`       | react-doctor's per-framework rules, keyed `nextjs`, `preact`, `react-native`, `tanstack-query`, `tanstack-start`                                              |
 | `reactDoctorCapabilityRules`      | react-doctor rules gated on the environment, keyed `ssr`, `react-compiler`, `i18n` — spread after `reactDoctorRules`                                          |
 | `shadcnRulesOff`                  | `antiSlopRulesOff` plus the style rules vendored shadcn primitives trip                                                                                       |
+| `nodeRules`                       | already in `rm3Config`; `nodeRulesOn` plus `nodeRulesOff`, exported for overrides that set their own `plugins`                                                |
+| `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the three `rm3-node` plugin rules, opted in by name                              |
+| `nodeRulesOff`                    | Node rules turned off on purpose, each with a reason                                                                                                          |
+| `nodeTestRulesOff`                | the Node rules the `**/*.test.ts` override relaxes; spread into your own override when tests live under another glob                                          |
+| `restrictedImportPaths`           | the `no-restricted-imports` list (packages a Node built-in replaces); extend it in an override rather than restating it                                       |
+| `rm3NodeJsPlugin`                 | already in `rm3Config`; the `rm3-node` jsPlugin entry, exported for overrides that set their own `plugins`                                                    |
+| `nodeCustomRules`                 | the three `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                               |
 
 React and react-doctor are on by default in `rm3Config`. An explicit plugin list REPLACES
 the base list, so overrides that set `plugins` must include `reactPlugins` to retain React.
@@ -65,6 +72,53 @@ export default defineConfig({
         },
     ],
 });
+```
+
+## Node rules
+
+`nodeRules` turns the practices in the global `node` skill and `skills/rm3-nodejs` into
+ratchets. `rm3Config` turns the `style`, `restriction` and `nursery` categories off, so each
+rule is named by hand in `nodeRulesOn` with the skill file it comes from. The ones that change
+what already-passing code has to look like:
+
+- `typescript/no-floating-promises` runs with `ignoreVoid: false`. `void promise` is no
+  longer an escape hatch; a fire-and-forget call ends in `.catch` or is awaited, because an
+  unhandled rejection reaches close-with-grace and takes the process down.
+- `import/extensions` requires the `.ts` extension on relative imports everywhere, including
+  Vite apps (the `react-vite.json` preset accepts it).
+- `no-restricted-imports` bans packages a Node built-in replaces (`dotenv`, `axios`, `uuid`,
+  `vitest`, `winston`, ...), plain `node:assert` in favour of `node:assert/strict`, and
+  `it` from `node:test` in favour of `test`. Inside `*.test.ts` it also bans `setTimeout`
+  from `node:timers/promises`: a fixed sleep is a flaky test.
+- `node/no-sync` (allowed at module level, off in tests), `unicorn/no-process-exit` and
+  `promise/prefer-await-to-then` each expect a named per-line disable at the handful of sites
+  where the pattern is the point: a CLI entrypoint, a promise-chain mutex.
+- Three rules from the `rm3-node` plugin in `@rm3/lint`: `prefer-timers-promises`,
+  `no-unguarded-json-parse`, `no-manual-signal-handlers`. See `packages/lint/README.md`.
+
+`nodeRulesOff` records the deliberate exceptions: `node/no-top-level-await` (unicorn's
+`prefer-top-level-await` is on), `promise/avoid-new`, `typescript/promise-function-async`,
+`import/no-default-export`, and the CommonJS-only `node/*` rules that
+`unicorn/prefer-module` makes unreachable.
+
+A consumer with tests under a glob other than `**/*.test.ts`:
+
+```ts
+overrides: [
+    { files: ['tests/**/*.ts', '**/*.test.tsx'], rules: { ...nodeTestRulesOff } },
+],
+```
+
+To restrict one more package, extend the list instead of restating it, since an override
+replaces the rule's options:
+
+```ts
+rules: {
+    'no-restricted-imports': [
+        'error',
+        { paths: [...restrictedImportPaths, { name: 'moment', message: 'Use Temporal.' }] },
+    ],
+},
 ```
 
 ## react-doctor runs inside oxlint

@@ -60,6 +60,7 @@ export function createEnv<T extends z.ZodRawShape>(
 export function findWorkspaceRoot(start: string): string {
   let dir = start;
   for (;;) {
+    // oxlint-disable-next-line node/no-sync -- runs once at startup, before anything else is scheduled
     if (existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
       return dir;
     }
@@ -85,6 +86,7 @@ export function findWorkspaceRoot(start: string): string {
  */
 export function loadRootEnv(): void {
   const file = path.join(findWorkspaceRoot(process.cwd()), '.env');
+  // oxlint-disable-next-line node/no-sync -- runs once at startup, before anything else is scheduled
   if (!existsSync(file)) {
     return;
   }

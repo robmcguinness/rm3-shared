@@ -5,11 +5,12 @@ import type { OxlintConfig } from 'oxlint';
 import type { Capability, RuleFramework } from 'oxlint-plugin-react-doctor/core';
 
 import { antiSlopRules, antiSlopRulesOff, complexityRules } from '@rm3/lint';
+import { nodeCustomRules } from '@rm3/lint/node';
 // The `core` entry is rule metadata only (31 ms to import); the root entry is
 // the plugin itself, which oxlint loads through `reactDoctorJsPlugin` below.
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
-export { antiSlopRules, antiSlopRulesOff, complexityRules };
+export { antiSlopRules, antiSlopRulesOff, complexityRules, nodeCustomRules };
 
 /**
  * React plugins already in `rm3Config.plugins`. Exported for consumer
@@ -337,6 +338,205 @@ export const reactDoctorCapabilityRules: Record<EnvironmentCapability, ReactDoct
 };
 
 /**
+ * The `rm3-node` plugin from `@rm3/lint`, resolved HERE like `anti-slop` so
+ * the copy in rm3-shared loads through a `link:` symlink. Already in
+ * `rm3Config.jsPlugins`; exported for the test and for consumer overrides.
+ */
+export const rm3NodeJsPlugin = {
+  name: 'rm3-node',
+  specifier: import.meta.resolve('@rm3/lint/node'),
+} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
+
+/**
+ * Packages the `node` and `rm3-nodejs` skills replace with a built-in, each
+ * with the replacement in its message. One list feeds both the base
+ * `no-restricted-imports` and the test override, which has to restate it
+ * because an override replaces a rule's options rather than merging them.
+ */
+export const restrictedImportPaths = [
+  // environment.md: `--env-file` / `@rm3/env` load the file; nothing to import.
+  { message: 'Use `node --env-file` or `@rm3/env`; Node loads .env itself.', name: 'dotenv' },
+  {
+    message: 'Use `node --env-file` or `@rm3/env`; Node loads .env itself.',
+    name: 'dotenv/config',
+  },
+  // fetch-and-http.md: global fetch with `AbortSignal.timeout`.
+  { message: 'Use the global fetch with AbortSignal.timeout().', name: 'node-fetch' },
+  { message: 'Use the global fetch with AbortSignal.timeout().', name: 'cross-fetch' },
+  { message: 'Use the global fetch with AbortSignal.timeout().', name: 'axios' },
+  { message: 'Use the global fetch with AbortSignal.timeout().', name: 'got' },
+  // Built into node:crypto and node:fs/promises.
+  { message: "Use randomUUID() from 'node:crypto'.", name: 'uuid' },
+  { message: "Use rm(path, { recursive: true }) from 'node:fs/promises'.", name: 'rimraf' },
+  { message: "Use mkdir(path, { recursive: true }) from 'node:fs/promises'.", name: 'mkdirp' },
+  { message: "Use glob() from 'node:fs/promises'.", name: 'glob' },
+  { message: "Use glob() from 'node:fs/promises'.", name: 'fast-glob' },
+  // testing.md: node:test is the runner; undici's MockAgent is allowed for fetch.
+  { message: "Use 'node:test' and 'node:assert/strict'.", name: 'vitest' },
+  { message: "Use 'node:test' and 'node:assert/strict'.", name: 'jest' },
+  { message: "Use 'node:test' and 'node:assert/strict'.", name: '@jest/globals' },
+  { message: "Use 'node:test' and 'node:assert/strict'.", name: 'mocha' },
+  { message: "Use 'node:test' and 'node:assert/strict'.", name: 'chai' },
+  { message: "Use t.mock from 'node:test'.", name: 'sinon' },
+  // logging.md: pino, through @rm3/logger.
+  { message: "Use pino through '@rm3/logger'.", name: 'winston' },
+  { message: "Use pino through '@rm3/logger'.", name: 'bunyan' },
+  { message: "Use pino through '@rm3/logger'.", name: 'log4js' },
+  { message: "Use pino through '@rm3/logger'.", name: 'consola' },
+  { message: "Use pino through '@rm3/logger'.", name: 'signale' },
+  // The legacy assert module has loose equality; every rm3 test uses strict.
+  { message: "Import from 'node:assert/strict'.", name: 'node:assert' },
+  // One name for a test case. `it` reads as BDD but node:test is not.
+  { importNames: ['it'], message: 'Use `test`.', name: 'node:test' },
+];
+
+/**
+ * Node rules from the off `style`, `restriction` and `nursery` categories,
+ * opted in by name, plus the three `rm3-node` plugin rules. Each one encodes
+ * a practice from the global `node` skill or `skills/rm3-nodejs`; the
+ * comment names the rule file it comes from. Both consumer repos passed
+ * every one of these at zero or near-zero hits when it was added, so they
+ * are ratchets, not cleanups.
+ */
+export const nodeRulesOn = {
+  // --- modules.md / typescript.md: ESM under type stripping ---
+  // `node:` prefix on every builtin.
+  'unicorn/prefer-node-protocol': 'error',
+  // No `require`, `module.exports`, `__dirname`; the CJS-only `node/*` rules
+  // in `nodeRulesOff` are covered by this one.
+  'unicorn/prefer-module': 'error',
+  // Relative imports carry their `.ts` extension: Node resolves nothing else,
+  // and Vite under `react-vite.json` accepts the same spelling. Bundler
+  // aliases (`@/components/ui/card`) are not packages, so they are named here;
+  // `#env`-style subpath imports already pass.
+  'import/extensions': [
+    'error',
+    'always',
+    {
+      ignorePackages: true,
+      pathGroupOverrides: [
+        { action: 'ignore', pattern: '@/**' },
+        { action: 'ignore', pattern: '~/**' },
+      ],
+    },
+  ],
+  // `import { type A } from` with only types leaves a side-effect import
+  // behind under `verbatimModuleSyntax`.
+  'typescript/no-import-type-side-effects': 'error',
+  // `__dirname + '/x'` breaks on Windows and under ESM; `join` or `new URL`.
+  'node/no-path-concat': 'error',
+
+  // --- async-patterns.md ---
+  'promise/no-nesting': 'error',
+  'promise/no-return-wrap': 'error',
+  'promise/param-names': 'error',
+  // Async/await over `.then` chains. The promise-chain-tail idiom in a mutex
+  // keeps a named per-line disable.
+  'promise/prefer-await-to-then': 'error',
+  // Nursery, so `warn`; the pre-commit gate still blocks on it.
+  'promise/no-return-in-finally': 'warn',
+  // `setTimeout(fn)` with no delay is `setImmediate` spelled ambiguously.
+  'unicorn/explicit-timer-delay': 'error',
+  // rm3-nodejs async-patterns.md: `node:timers/promises`.
+  'rm3-node/prefer-timers-promises': nodeCustomRules['rm3-node/prefer-timers-promises'],
+
+  // --- error-handling.md ---
+  'unicorn/error-message': 'error',
+  'unicorn/throw-new-error': 'error',
+  // A custom error sets `name` and ends in `Error`, or `instanceof` and log
+  // output lie about what it is.
+  'unicorn/custom-error-definition': 'error',
+  'unicorn/no-useless-error-capture-stack-trace': 'error',
+  // `catch {` when the error is unused; `catch (cause)` when it is.
+  'unicorn/prefer-optional-catch-binding': 'error',
+  // `.catch((error: any) => ...)` is the one place `any` sneaks back in.
+  'typescript/use-unknown-in-catch-callback-variable': 'error',
+  // A callback's `err` argument is handled or the callback is wrong.
+  'node/handle-callback-err': 'error',
+  // A zod `safeParse` on the result does not catch the `SyntaxError`.
+  'rm3-node/no-unguarded-json-parse': nodeCustomRules['rm3-node/no-unguarded-json-parse'],
+
+  // --- graceful-shutdown.md / performance.md ---
+  // close-with-grace ends the process; a CLI entrypoint takes a named disable.
+  'unicorn/no-process-exit': 'error',
+  // close-with-grace also owns the signal and fatal-error listeners.
+  'rm3-node/no-manual-signal-handlers': nodeCustomRules['rm3-node/no-manual-signal-handlers'],
+  // Sync I/O blocks the event loop. Module-level reads at startup are fine;
+  // tests turn this off in `nodeTestRulesOff`.
+  'node/no-sync': ['error', { allowAtRootLevel: true }],
+
+  // --- rm3-nodejs modern-js-features.md ---
+  'unicorn/prefer-structured-clone': 'error',
+
+  // --- environment.md, logging.md, testing.md: built-ins over packages ---
+  'no-restricted-imports': ['error', { paths: restrictedImportPaths }],
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
+ * Node rules turned off on purpose, each a recorded decision. Spread into
+ * `nodeRules` after `nodeRulesOn`, so a reasoned `off` beats an opt-in.
+ */
+export const nodeRulesOff = {
+  // Conflicts with `unicorn/prefer-top-level-await`, on via `pedantic`, and
+  // rm3-nodejs project-setup.md recommends top-level await.
+  'node/no-top-level-await': 'off',
+  // Wrapping a callback or socket API in `new Promise` is the documented
+  // pattern; `rm3-node/prefer-timers-promises` catches the one misuse.
+  'promise/avoid-new': 'off',
+  // Fires on the `(err, data)` shape inside those same wrappers.
+  'promise/prefer-await-to-callbacks': 'off',
+  // Would flag every kysely `.execute()` forwarder that returns a promise
+  // without awaiting it.
+  'typescript/promise-function-async': 'off',
+  // Fastify plugins, `*.config.ts`, Playwright and Astro configs, and email
+  // templates all export default by contract.
+  'import/no-default-export': 'off',
+  // A consumer turns this on for an isomorphic package (machdown's contract).
+  'import/no-nodejs-modules': 'off',
+  // CommonJS-only rules; `unicorn/prefer-module` above rejects the whole
+  // module system, so these never get a chance to fire.
+  'node/callback-return': 'off',
+  'node/exports-style': 'off',
+  'node/global-require': 'off',
+  'node/no-exports-assign': 'off',
+  'node/no-mixed-requires': 'off',
+  'node/no-new-require': 'off',
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/** Already spread into `rm3Config.rules`; exported for overrides that redefine `plugins`. */
+export const nodeRules = {
+  ...nodeRulesOn,
+  ...nodeRulesOff,
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
+ * Node rules relaxed in the test-file override (the `*.test.ts` glob),
+ * already part of `rm3Config`. Exported for a consumer whose tests live under
+ * a different glob (`*.test.tsx`, a `tests` directory).
+ */
+export const nodeTestRulesOff = {
+  // `mkdtempSync` and friends in test setup are the point, not a hazard.
+  'node/no-sync': 'off',
+  // A throwing parse in a test is the assertion.
+  'rm3-node/no-unguarded-json-parse': 'off',
+  // The base list, plus: a wall-clock sleep is the classic flaky test
+  // (flaky-tests.md). Wait for the condition or use `t.mock.timers`.
+  'no-restricted-imports': [
+    'error',
+    {
+      paths: [
+        ...restrictedImportPaths,
+        {
+          importNames: ['setTimeout'],
+          message: 'Wait for the condition or use t.mock.timers; a fixed sleep is a flaky test.',
+          name: 'node:timers/promises',
+        },
+      ],
+    },
+  ],
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
  * Rules to turn off over vendored shadcn primitives. These are generated by
  * `shadcn add` and re-generated on upgrade, so no rule here may force an edit
  * that the next regeneration deletes — every style rule upstream trips is off.
@@ -418,6 +618,7 @@ export const rm3Config: OxlintConfig = {
       name: 'anti-slop',
       specifier: import.meta.resolve('@rm3/lint'),
     },
+    rm3NodeJsPlugin,
     reactDoctorJsPlugin,
   ],
   options: {
@@ -435,7 +636,17 @@ export const rm3Config: OxlintConfig = {
       // The rule measures the wrong thing here, so it is off for markup and
       // stays on for the `.ts` logic those components call.
       files: ['**/*.tsx'],
-      rules: { complexity: 'off' },
+      rules: {
+        complexity: 'off',
+        // `ignoreVoid: false` is a Node decision (see `nodeRulesOn`). In a
+        // component, `void mutate()` in an event handler is the idiom, and
+        // TanStack mutations route rejections to `onError`; the default
+        // (`void` allowed) is right for markup.
+        'typescript/no-floating-promises': 'error',
+        // Matches any `*Sync` call by name, so react-dom's `flushSync` trips
+        // it. No component does filesystem I/O.
+        'node/no-sync': 'off',
+      },
     },
     {
       // Build tooling reads untyped JSON and third-party config types.
@@ -458,6 +669,7 @@ export const rm3Config: OxlintConfig = {
         // Tests set and swap environment variables directly. That is exactly
         // what a lazy env reader exists to serve.
         'node/no-process-env': 'off',
+        ...nodeTestRulesOff,
       },
     },
   ],
@@ -491,7 +703,10 @@ export const rm3Config: OxlintConfig = {
     // --- Type-aware rules worth having ---
     'typescript/consistent-type-exports': 'warn',
     'typescript/dot-notation': 'warn',
-    'typescript/no-floating-promises': 'error',
+    // `void promise` is not an escape hatch: a rejected warm-up task would
+    // reach `unhandledRejection` and close-with-grace would take the process
+    // down. Fire-and-forget ends in `.catch` or is awaited.
+    'typescript/no-floating-promises': ['error', { ignoreVoid: false }],
     'typescript/no-misused-promises': 'error',
     'typescript/no-unnecessary-qualifier': 'warn',
     'typescript/no-unnecessary-type-conversion': 'warn',
@@ -625,6 +840,9 @@ export const rm3Config: OxlintConfig = {
     // --- React and react-doctor (on for every file) ---
     ...reactRules,
     ...reactDoctorRules,
+
+    // --- Node (on for every file; the rules match Node APIs and imports) ---
+    ...nodeRules,
   },
 };
 

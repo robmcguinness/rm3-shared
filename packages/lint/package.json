@@ -11,6 +11,10 @@
     ".": {
       "source": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./node": {
+      "source": "./src/node.ts",
+      "default": "./src/node.ts"
     }
   },
   "scripts": {

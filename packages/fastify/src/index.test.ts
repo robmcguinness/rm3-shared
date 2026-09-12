@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, test } from 'node:test';
 
 import Fastify from 'fastify';
 
@@ -83,7 +83,7 @@ const browserRequest = (): RequestLike => ({
 });
 
 describe('createRequestSerializer', () => {
-  it('keeps only the allow-listed headers that are present', () => {
+  test('keeps only the allow-listed headers that are present', () => {
     const serialize = createRequestSerializer();
 
     const { headers } = serialize(browserRequest());
@@ -99,7 +99,7 @@ describe('createRequestSerializer', () => {
     assert.ok(!('content-type' in headers));
   });
 
-  it('reports method, url and remoteAddress and nothing else', () => {
+  test('reports method, url and remoteAddress and nothing else', () => {
     const serialized = createRequestSerializer()(browserRequest());
 
     assert.deepEqual(Object.keys(serialized).toSorted(), [
@@ -113,7 +113,7 @@ describe('createRequestSerializer', () => {
     assert.equal(serialized.remoteAddress, '127.0.0.1');
   });
 
-  it('replaces the default list when given one', () => {
+  test('replaces the default list when given one', () => {
     const serialize = createRequestSerializer(['x-only']);
 
     const { headers } = serialize({
@@ -124,7 +124,7 @@ describe('createRequestSerializer', () => {
     assert.deepEqual(headers, { 'x-only': 'yes' });
   });
 
-  it('passes a multi-value header through unchanged', () => {
+  test('passes a multi-value header through unchanged', () => {
     const serialize = createRequestSerializer(['x-many']);
 
     const { headers } = serialize({ ...browserRequest(), headers: { 'x-many': ['a', 'b'] } });
@@ -132,7 +132,7 @@ describe('createRequestSerializer', () => {
     assert.deepEqual(headers['x-many'], ['a', 'b']);
   });
 
-  it('exports the default list the security hook relies on', () => {
+  test('exports the default list the security hook relies on', () => {
     for (const name of ['origin', 'sec-fetch-site', 'content-type', 'authorization']) {
       assert.ok(DEFAULT_REQUEST_HEADERS.includes(name), `${name} is no longer logged`);
     }
@@ -140,7 +140,7 @@ describe('createRequestSerializer', () => {
 });
 
 describe('createFastifyLogger', () => {
-  it('drives Fastify request logging with the allow-listed req and the default res', async () => {
+  test('drives Fastify request logging with the allow-listed req and the default res', async () => {
     const sink = capture();
     const app = Fastify({
       loggerInstance: createFastifyLogger({ level: 'info', pretty: false }, sink.stream),
@@ -175,7 +175,7 @@ describe('createFastifyLogger', () => {
     assert.equal(completed.res?.statusCode, 200);
   });
 
-  it('merges extra redact paths with the baseline and leaves err.code alone', () => {
+  test('merges extra redact paths with the baseline and leaves err.code alone', () => {
     const sink = capture();
     const log = createFastifyLogger({ pretty: false, redactPaths: ['token', 'code'] }, sink.stream);
 
@@ -192,7 +192,7 @@ describe('createFastifyLogger', () => {
     assert.equal(line.err?.code, 'E_FAIL');
   });
 
-  it('does not censor a top-level token without an extra path', () => {
+  test('does not censor a top-level token without an extra path', () => {
     // pino's `*` matches one level, so `*.token` misses `{ token }`. Consumers
     // that log one must add `token` themselves.
     const sink = capture();

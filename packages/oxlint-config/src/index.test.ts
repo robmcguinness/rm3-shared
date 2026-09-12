@@ -2,7 +2,7 @@ import type { AllowWarnDeny, DummyRule } from 'oxlint';
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { describe, it } from 'node:test';
+import { describe, test } from 'node:test';
 
 import reactDoctorPlugin, {
   NEXTJS_RULES,
@@ -14,7 +14,12 @@ import reactDoctorPlugin, {
 } from 'oxlint-plugin-react-doctor';
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
+import rm3NodePlugin from '@rm3/lint/node';
+
 import {
+  nodeRulesOff,
+  nodeRulesOn,
+  nodeTestRulesOff,
   reactDoctorCapabilityRules,
   reactDoctorFrameworkRules,
   reactDoctorJsPlugin,
@@ -25,6 +30,7 @@ import {
   reactPlugins,
   reactRules,
   rm3Config,
+  rm3NodeJsPlugin,
 } from './index.ts';
 
 /** oxlint scope names use underscores, plugin names do not. */
@@ -91,7 +97,7 @@ function readRecommendedMinusPorted(): Record<string, string> {
 }
 
 describe('reactDoctorJsPlugin', () => {
-  it('points at the pinned plugin, resolved from rm3-shared', () => {
+  test('points at the pinned plugin, resolved from rm3-shared', () => {
     assert.equal(reactDoctorJsPlugin.name, reactDoctorPlugin.meta.name);
     assert.ok(reactDoctorJsPlugin.specifier.startsWith('file://'));
     assert.match(reactDoctorJsPlugin.specifier, /oxlint-plugin-react-doctor/);
@@ -99,7 +105,7 @@ describe('reactDoctorJsPlugin', () => {
 });
 
 describe('reactDoctorRules', () => {
-  it("is a subset of react-doctor's recommended set, at react-doctor's severities", () => {
+  test("is a subset of react-doctor's recommended set, at react-doctor's severities", () => {
     const expected = readRecommendedMinusPorted();
     for (const [key, severity] of Object.entries(reactDoctorRules)) {
       assert.ok(key in expected, `${key} is not recommended, or oxlint already runs it`);
@@ -109,7 +115,7 @@ describe('reactDoctorRules', () => {
     }
   });
 
-  it('accounts for every recommended rule it leaves out', () => {
+  test('accounts for every recommended rule it leaves out', () => {
     const expected = readRecommendedMinusPorted();
     const inCapabilityBucket = new Set(
       Object.values(reactDoctorCapabilityRules).flatMap((bucket) => onKeys(bucket)),
@@ -129,7 +135,7 @@ describe('reactDoctorRules', () => {
     }
   });
 
-  it('names only rules the plugin registers for standalone oxlint', () => {
+  test('names only rules the plugin registers for standalone oxlint', () => {
     const everyKey = [
       ...Object.keys(reactDoctorRules),
       ...Object.values(reactDoctorFrameworkRules).flatMap((bucket) => Object.keys(bucket)),
@@ -140,21 +146,21 @@ describe('reactDoctorRules', () => {
     }
   });
 
-  it('keeps the effect rules on, since oxlint has no port of them', () => {
+  test('keeps the effect rules on, since oxlint has no port of them', () => {
     assert.equal(reactDoctorRules['react-doctor/no-derived-state'], 'warn');
     assert.equal(reactDoctorRules['react-doctor/no-adjust-state-on-prop-change'], 'warn');
     // `disabledWhen: ['react:18']`: automatic batching made the chain harmless.
     assert.ok(!('react-doctor/no-chain-state-updates' in reactDoctorRules));
   });
 
-  it('assumes React 19', () => {
+  test('assumes React 19', () => {
     // Requires React 18+, so still on.
     assert.equal(reactDoctorRules['react-doctor/no-react-dom-deprecated-apis'], 'warn');
     // Disabled on React 19+, where ref cleanups are valid.
     assert.ok(!('react-doctor/no-ref-callback-cleanup-before-react-19' in reactDoctorRules));
   });
 
-  it('leaves environment-gated rules to the capability buckets', () => {
+  test('leaves environment-gated rules to the capability buckets', () => {
     assert.ok(!('react-doctor/react-compiler-no-manual-memoization' in reactDoctorRules));
     assert.ok(!('react-doctor/no-hydration-branch-on-browser-global' in reactDoctorRules));
     assert.equal(
@@ -169,7 +175,7 @@ describe('reactDoctorRules', () => {
     );
   });
 
-  it('turns off in each bucket only rules the base set turns on', () => {
+  test('turns off in each bucket only rules the base set turns on', () => {
     for (const [capability, bucket] of Object.entries(reactDoctorCapabilityRules)) {
       for (const [key, severity] of Object.entries(bucket)) {
         if (severity === 'off') {
@@ -181,7 +187,7 @@ describe('reactDoctorRules', () => {
 });
 
 describe('reactDoctorFrameworkRules', () => {
-  it("matches react-doctor's own per-framework sets", () => {
+  test("matches react-doctor's own per-framework sets", () => {
     assert.deepEqual(reactDoctorFrameworkRules.nextjs, NEXTJS_RULES);
     assert.deepEqual(reactDoctorFrameworkRules.preact, PREACT_RULES);
     assert.deepEqual(reactDoctorFrameworkRules['react-native'], REACT_NATIVE_RULES);
@@ -191,7 +197,7 @@ describe('reactDoctorFrameworkRules', () => {
 });
 
 describe('reactRules', () => {
-  it('runs every recommended rule that reactDoctorRules leaves to oxlint', () => {
+  test('runs every recommended rule that reactDoctorRules leaves to oxlint', () => {
     const oxlintRules = readOxlintReactRules();
     // `rm3Config.categories` lists only the categories that are on.
     const enabledCategories = new Set(Object.keys(rm3Config.categories ?? {}));
@@ -212,7 +218,7 @@ describe('reactRules', () => {
     }
   });
 
-  it('names only rules that exist in oxlint', () => {
+  test('names only rules that exist in oxlint', () => {
     // Catches a typo or a rule oxlint dropped in a bump.
     const oxlintRules = readOxlintReactRules();
     for (const oxlintKey of Object.keys(reactRules)) {
@@ -223,7 +229,7 @@ describe('reactRules', () => {
 });
 
 describe('rm3Config', () => {
-  it('includes every React plugin and react-doctor by default', () => {
+  test('includes every React plugin and react-doctor by default', () => {
     for (const plugin of reactPlugins) {
       assert.ok(rm3Config.plugins?.includes(plugin), `${plugin} is missing`);
     }
@@ -231,7 +237,7 @@ describe('rm3Config', () => {
     assert.ok(rm3Config.jsPlugins?.includes(reactDoctorJsPlugin));
   });
 
-  it('includes the React and react-doctor rules without shadowing decisions', () => {
+  test('includes the React and react-doctor rules without shadowing decisions', () => {
     for (const rules of [reactRules, reactDoctorRules]) {
       assert.deepEqual(
         Object.fromEntries(Object.keys(rules).map((key) => [key, rm3Config.rules?.[key]])),
@@ -242,7 +248,7 @@ describe('rm3Config', () => {
 });
 
 describe('reactDoctorRulesCoveredByOxlint', () => {
-  it('turns off only recommended rules', () => {
+  test('turns off only recommended rules', () => {
     for (const [key, severity] of Object.entries(reactDoctorRulesCoveredByOxlint)) {
       assert.equal(severity, 'off');
       assert.equal(reactDoctorRules[key], 'off');
@@ -250,7 +256,7 @@ describe('reactDoctorRulesCoveredByOxlint', () => {
     }
   });
 
-  it('keeps every oxlint counterpart enabled', () => {
+  test('keeps every oxlint counterpart enabled', () => {
     const listings = readOxlintRules();
     for (const [doctorKey, oxlintKey] of Object.entries(reactDoctorOxlintCounterparts)) {
       const listing = listings.get(oxlintKey);
@@ -273,12 +279,96 @@ describe('reactDoctorRulesCoveredByOxlint', () => {
     }
   });
 
-  it('mirrors the no-await-in-loop decision', () => {
+  test('mirrors the no-await-in-loop decision', () => {
     assert.equal(
       rm3Config.rules?.['no-await-in-loop'],
       'off',
       'Move react-doctor/async-await-in-loop out of reactDoctorRulesOff if rm3 turns no-await-in-loop back on',
     );
     assert.equal(reactDoctorRulesOff['react-doctor/async-await-in-loop'], 'off');
+  });
+});
+
+describe('nodeRules', () => {
+  const RM3_NODE_PREFIX = 'rm3-node/';
+
+  test('names only rules that exist in oxlint or in the rm3-node plugin', () => {
+    // Catches a typo or a rule oxlint dropped in a bump.
+    const oxlintRules = readOxlintRules();
+    for (const key of [...Object.keys(nodeRulesOn), ...Object.keys(nodeRulesOff)]) {
+      if (key.startsWith(RM3_NODE_PREFIX)) {
+        assert.ok(
+          key.slice(RM3_NODE_PREFIX.length) in rm3NodePlugin.rules,
+          `${key} is not an rm3-node plugin rule`,
+        );
+      } else {
+        assert.ok(oxlintRules.has(key), `${key} is not an oxlint rule`);
+      }
+    }
+  });
+
+  test('names every rm3-node plugin rule', () => {
+    for (const id of Object.keys(rm3NodePlugin.rules)) {
+      assert.ok(`${RM3_NODE_PREFIX}${id}` in nodeRulesOn, `rm3-node/${id} is not enabled`);
+    }
+    assert.equal(rm3NodeJsPlugin.name, rm3NodePlugin.meta?.name);
+    assert.ok(rm3NodeJsPlugin.specifier.startsWith('file://'));
+    assert.ok(rm3Config.jsPlugins?.includes(rm3NodeJsPlugin), 'rm3-node is not in jsPlugins');
+  });
+
+  test('opts in only rules whose category rm3Config turns off', () => {
+    // A rule from an enabled category is already on; naming it again is
+    // either a no-op or a severity change that should be recorded elsewhere.
+    const oxlintRules = readOxlintRules();
+    const enabledCategories = new Set(Object.keys(rm3Config.categories ?? {}));
+    for (const key of Object.keys(nodeRulesOn)) {
+      const listing = oxlintRules.get(key);
+      if (listing !== undefined) {
+        assert.ok(
+          !enabledCategories.has(listing.category),
+          `${key} is already on via the ${listing.category} category`,
+        );
+      }
+    }
+  });
+
+  test('turns off in the test override only rules the base set turns on', () => {
+    for (const key of Object.keys(nodeTestRulesOff)) {
+      assert.ok(key in nodeRulesOn, `the test override relaxes ${key}, which is not on`);
+    }
+    const testOverride = rm3Config.overrides?.find((override) =>
+      override.files.includes('**/*.test.ts'),
+    );
+    assert.ok(testOverride, 'no **/*.test.ts override');
+    for (const [key, setting] of Object.entries(nodeTestRulesOff)) {
+      assert.deepEqual(testOverride.rules?.[key], setting, `${key} is not in the test override`);
+    }
+  });
+
+  test('keeps top-level await allowed, since unicorn recommends it', () => {
+    const listing = readOxlintRules().get('unicorn/prefer-top-level-await');
+    assert.ok(listing, 'unicorn/prefer-top-level-await does not exist');
+    const category = Object.entries<AllowWarnDeny>({ ...rm3Config.categories }).find(
+      ([name]) => name === listing.category,
+    )?.[1];
+    assert.ok(isOn(category), 'prefer-top-level-await is off');
+    assert.equal(nodeRulesOff['node/no-top-level-await'], 'off');
+    assert.ok(!('node/no-top-level-await' in nodeRulesOn));
+  });
+
+  test('requires fire-and-forget promises to end in .catch', () => {
+    const setting = rm3Config.rules?.['typescript/no-floating-promises'];
+    assert.ok(setting !== undefined && isRuleTuple(setting));
+    assert.deepEqual(setting, ['error', { ignoreVoid: false }]);
+  });
+
+  test('includes the Node rules without shadowing decisions', () => {
+    assert.deepEqual(
+      Object.fromEntries(Object.keys(nodeRulesOff).map((key) => [key, rm3Config.rules?.[key]])),
+      nodeRulesOff,
+    );
+    for (const key of Object.keys(nodeRulesOn)) {
+      assert.ok(key in nodeRulesOff || rm3Config.rules?.[key] !== undefined, `${key} missing`);
+    }
   });
 });

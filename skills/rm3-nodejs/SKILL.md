@@ -37,7 +37,6 @@ Read individual files on demand — only open what the current task requires:
 - [references/async-patterns.md](references/async-patterns.md) — iterators, async iterators, generators, pagination, batch processing, events.on/once, timers promises API
 - [references/modern-js-features.md](references/modern-js-features.md) — Promise.withResolvers(), structuredClone(), iterator helpers, Set operations, explicit resource management (using/dispose)
 - [references/worker-threads.md](references/worker-threads.md) — worker threads with parentPort/workerData
-- [references/typescript-patterns.md](references/typescript-patterns.md) — unknown vs any, satisfies, discriminated unions, exhaustive checks, as const, type predicates, utility types, runtime validation, strict config
 
 ## CLI flags
 
