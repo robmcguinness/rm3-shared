@@ -36,6 +36,9 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `restrictedImportPaths`           | the `no-restricted-imports` list (packages a Node built-in replaces); extend it in an override rather than restating it                                       |
 | `rm3NodeJsPlugin`                 | already in `rm3Config`; the `rm3-node` jsPlugin entry, exported for overrides that set their own `plugins`                                                    |
 | `nodeCustomRules`                 | the three `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                               |
+| `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
+| `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
+| `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
 
 React and react-doctor are on by default in `rm3Config`. An explicit plugin list REPLACES
 the base list, so overrides that set `plugins` must include `reactPlugins` to retain React.
@@ -120,6 +123,36 @@ rules: {
     ],
 },
 ```
+
+## Tailwind rules
+
+`tailwindRulesOn` turns the two checkable practices in `skills/rm3-tailwind` into ratchets, both
+from the `rm3-tailwind` plugin in `@rm3/lint` (see `packages/lint/README.md`):
+
+- `rm3-tailwind/no-arbitrary-values`: no `bg-[#fff]` / `p-[13px]` outside `h-`, `w-`, `min-h-`,
+  `max-h-`, `min-w-`, `max-w-`. Tokens live in `@theme`. Arbitrary variants such as
+  `data-[state=open]:` are not values and pass.
+- `rm3-tailwind/no-dynamic-class-names`: no `bg-${color}-600` or `'text-' + size`; Tailwind only
+  emits classes it finds whole in source.
+
+Both are on for every file and match only `className` / `class` attributes and the class helpers
+(`cn`, `clsx`, `cva`, `twMerge`, `tv`, `twJoin`), so a Node file pays nothing. `shadcnRulesOff`
+turns both off: upstream primitives use `rounded-[...]` and `transition-[...]`.
+
+A consumer that needs structural arbitrary values widens the allowlist in its own override; the
+override replaces the rule's options, so restate the defaults:
+
+```ts
+rules: {
+    'rm3-tailwind/no-arbitrary-values': [
+        'error',
+        { allow: ['h-', 'w-', 'min-h-', 'max-h-', 'min-w-', 'max-w-', 'grid-cols-', 'transition-'] },
+    ],
+},
+```
+
+The skill's other practices are not lint rules: `@apply` lives in CSS, which oxlint does not
+read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
 
 ## react-doctor runs inside oxlint
 

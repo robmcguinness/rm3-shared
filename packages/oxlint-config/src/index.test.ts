@@ -15,6 +15,7 @@ import reactDoctorPlugin, {
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
 import rm3NodePlugin from '@rm3/lint/node';
+import rm3TailwindPlugin from '@rm3/lint/tailwind';
 
 import {
   nodeRulesOff,
@@ -31,6 +32,9 @@ import {
   reactRules,
   rm3Config,
   rm3NodeJsPlugin,
+  rm3TailwindJsPlugin,
+  shadcnRulesOff,
+  tailwindRulesOn,
 } from './index.ts';
 
 /** oxlint scope names use underscores, plugin names do not. */
@@ -369,6 +373,49 @@ describe('nodeRules', () => {
     );
     for (const key of Object.keys(nodeRulesOn)) {
       assert.ok(key in nodeRulesOff || rm3Config.rules?.[key] !== undefined, `${key} missing`);
+    }
+  });
+});
+
+describe('tailwindRules', () => {
+  const RM3_TAILWIND_PREFIX = 'rm3-tailwind/';
+
+  test('names only rules the rm3-tailwind plugin registers', () => {
+    for (const key of Object.keys(tailwindRulesOn)) {
+      assert.ok(key.startsWith(RM3_TAILWIND_PREFIX), `${key} is not an rm3-tailwind rule`);
+      assert.ok(
+        key.slice(RM3_TAILWIND_PREFIX.length) in rm3TailwindPlugin.rules,
+        `${key} is not an rm3-tailwind plugin rule`,
+      );
+    }
+  });
+
+  test('names every rm3-tailwind plugin rule', () => {
+    for (const id of Object.keys(rm3TailwindPlugin.rules)) {
+      assert.ok(
+        `${RM3_TAILWIND_PREFIX}${id}` in tailwindRulesOn,
+        `rm3-tailwind/${id} is not enabled`,
+      );
+    }
+    assert.equal(rm3TailwindJsPlugin.name, rm3TailwindPlugin.meta?.name);
+    assert.ok(rm3TailwindJsPlugin.specifier.startsWith('file://'));
+    assert.ok(
+      rm3Config.jsPlugins?.includes(rm3TailwindJsPlugin),
+      'rm3-tailwind is not in jsPlugins',
+    );
+  });
+
+  test('includes the Tailwind rules without shadowing decisions', () => {
+    for (const [key, setting] of Object.entries(tailwindRulesOn)) {
+      assert.deepEqual(rm3Config.rules?.[key], setting, `${key} missing`);
+    }
+  });
+
+  test('turns every rm3-tailwind rule off over vendored shadcn primitives', () => {
+    // The primitives use `rounded-[...]` and friends; `shadcn add` overwrites edits.
+    const off = new Map(Object.entries(shadcnRulesOff));
+    for (const id of Object.keys(rm3TailwindPlugin.rules)) {
+      assert.equal(off.get(`${RM3_TAILWIND_PREFIX}${id}`), 'off', `rm3-tailwind/${id} is on`);
     }
   });
 });

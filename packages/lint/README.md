@@ -51,6 +51,24 @@ has no `no-restricted-syntax`). Kept apart from `anti-slop` so `antiSlopRulesOff
 | `no-unguarded-json-parse`   | `JSON.parse(...)` with no enclosing `try` block in the same function. A schema `safeParse` on the result does not catch the `SyntaxError`. Off in `*.test.ts`.  |
 | `no-manual-signal-handlers` | `process.on` / `once` / `addListener` for `SIGTERM`, `SIGINT`, `SIGHUP`, `uncaughtException`, `unhandledRejection`, on the global or the `node:process` import. |
 
+`src/tailwind.ts` (the `@rm3/lint/tailwind` export) is a third plugin, `rm3-tailwind`, for the two
+practices in `skills/rm3-tailwind` a linter can check from class strings alone. Also kept apart from
+`anti-slop`; `shadcnRulesOff` in `@rm3/oxlint-config` turns both off by name over vendored primitives.
+
+- `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-tailwind` jsPlugin
+  by `@rm3/oxlint-config`.
+- `tailwindCustomRules` — the two rules at `error`.
+
+| rule                     | reports                                                                                                                                                                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `no-arbitrary-values`    | `bg-[#fff]`, `p-[13px]`, `[mask-type:luminance]` in a class string, unless the utility prefix is in `allow` (default `h-`, `w-`, `min-h-`, `max-h-`, `min-w-`, `max-w-`). Arbitrary variants (`data-[state=open]:`) and the v4 variable shorthand (`bg-(--brand)`) are not values. Modifiers (`/[0.37]`) are ignored. |
+| `no-dynamic-class-names` | A `${}` or `+` glued to text inside a class string: `bg-${color}-600`, `'text-' + size`. Whole-token interpolation (`${base} ${extra}`) passes.                                                                                                                                                                       |
+
+Both look at JSX `className`/`class` attributes and at string arguments to the class helpers in
+`callees` (default `cn`, `clsx`, `cva`, `twMerge`, `tv`, `twJoin`), recursing through arrays,
+object keys and values, ternaries, logical expressions and TypeScript casts. A template literal
+tagged with a callee (`tw\`...\``) counts too.
+
 Each rule has a co-located `*.test.ts` driven by `RuleTester` from `oxlint/plugins-dev`.
 
 This package is source-only: `exports` points straight at `./src/index.ts`, no build step, no
