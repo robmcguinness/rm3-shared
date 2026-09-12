@@ -1,0 +1,25 @@
+{
+  "name": "@rm3/fastify",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fastify request logging on @rm3/logger: header allow-list, merged redaction",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "node --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@rm3/logger": "workspace:*"
+  },
+  "devDependencies": {
+    "@rm3/typescript-config": "workspace:*",
+    "@types/node": "^26.1.2",
+    "fastify": "^5.12.4",
+    "typescript": "^7.0.2"
+  }
+}

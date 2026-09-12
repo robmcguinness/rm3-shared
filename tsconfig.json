@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/env" },
+    { "path": "./packages/fastify" },
     { "path": "./packages/lint" },
     { "path": "./packages/logger" },
     { "path": "./packages/oxfmt-config" },

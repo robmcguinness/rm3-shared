@@ -21,7 +21,8 @@ rm3-shared/
 │   ├── oxfmt-config/            shared oxfmt options (rm3Fmt)
 │   ├── lefthook-config/         shared pre-commit jobs (lefthook.yml)
 │   ├── env/                     type-safe env vars (zod)
-│   └── logger/                  structured logging (pino)
+│   ├── logger/                  structured logging (pino)
+│   └── fastify/                 Fastify request logging (on @rm3/logger)
 ├── templates/                   copy-once dotfiles for a new consumer repo
 ├── oxlint.config.ts             root dogfood: extends @rm3/oxlint-config
 ├── oxfmt.config.ts              root dogfood: spreads rm3Fmt
@@ -92,6 +93,7 @@ In the consumer's `package.json`:
     | `@rm3/oxlint-config`     | `./src/index.ts` | **yes** — it imports `@rm3/lint`, `eslint-plugin-perfectionist` and `oxlint-plugin-react-doctor` at runtime |
     | `@rm3/env`               | `./src/index.ts` | **yes** — imports `zod`                                                                                     |
     | `@rm3/logger`            | `./src/index.ts` | **yes** — imports `pino` and `pino-pretty`                                                                  |
+    | `@rm3/fastify`           | `./src/index.ts` | **yes** — imports `@rm3/logger` (`pino`, `pino-pretty`); `fastify` is a devDependency for its tests only    |
 
     Install unconditionally anyway: the tree is one `pnpm install` and the two
     config presets are usually linked next to `@rm3/oxlint-config`.

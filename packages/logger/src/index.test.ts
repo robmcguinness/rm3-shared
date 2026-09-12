@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createLogger, type DestinationStream } from './index.ts';
+import { createLogger, REDACT_PATHS, resolveRedactPaths, type DestinationStream } from './index.ts';
 
 /**
  * The fields these tests read back off a written line. A named contract rather
@@ -10,6 +10,7 @@ import { createLogger, type DestinationStream } from './index.ts';
  */
 interface LogLine {
   service?: string;
+  token?: string;
   user?: { password?: string };
 }
 
@@ -80,5 +81,26 @@ describe('createLogger', () => {
     const [line] = sink.lines();
     assert.ok(line);
     assert.equal(line.user?.password, '[redacted]');
+  });
+
+  it('merges extra redact paths with the baseline', () => {
+    const sink = capture();
+    const log = createLogger({ pretty: false, redactPaths: ['token'] }, sink.stream);
+
+    log.info({ token: 't-1', user: { password: 'hunter2' } }, 'signed in');
+
+    const [line] = sink.lines();
+    assert.ok(line);
+    // The extra path is censored, and so is the baseline one.
+    assert.equal(line.token, '[redacted]');
+    assert.equal(line.user?.password, '[redacted]');
+  });
+
+  it('lists the baseline first and drops duplicate extras', () => {
+    const paths = resolveRedactPaths(['*.token', 'x']);
+
+    assert.deepEqual(paths.slice(0, REDACT_PATHS.length), REDACT_PATHS);
+    assert.equal(paths.length, REDACT_PATHS.length + 1);
+    assert.equal(paths.at(-1), 'x');
   });
 });
