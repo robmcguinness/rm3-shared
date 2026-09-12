@@ -19,7 +19,13 @@
 #   independently, so the coder can be <base>-coder-2 while the reviewer is
 #   plain <base>-reviewer. A matching suffix is NOT evidence of the same run.
 # - name may be null for agents herdr detected but nobody named; skip them.
+#
+# Output goes to stdout AND to ~/.agents/plans/<repo>/.siblings.env, which
+# after-commit.sh sources (shell state does not survive between orchestrator
+# tool calls). The reviewer is probed once for hunk loopback access; --no-probe
+# skips that on a resume where it was already proven this session.
 set -euo pipefail
+PROBE=1; [ "${1:-}" = "--no-probe" ] && PROBE=0
 WS="${HERDR_WORKSPACE_ID:?not inside herdr}"
 ROOT=$(git rev-parse --show-toplevel)
 
@@ -72,9 +78,40 @@ SESSION=$(hunk session get --repo "$ROOT" --json 2>/dev/null | jq -r '.session.s
 [ -n "$SESSION" ] || { echo "hunk session get --repo $ROOT returned no sessionId (is $BASE-hunk running hunk diff --watch?)" >&2; exit 2; }
 
 CODER_KIND=$(field "$CODER" 3); REVIEWER_KIND=$(field "$REVIEWER" 3)
-printf 'BASE=%s\n' "$BASE"
-printf 'CODER_NAME=%s\nCODER_PANE=%s\nCODER_KIND=%s\nCODER_RESET=%s\n' \
-  "$(field "$CODER" 1)" "$(field "$CODER" 2)" "$CODER_KIND" "$(reset_for "$CODER_KIND")"
-printf 'REVIEWER_NAME=%s\nREVIEWER_PANE=%s\nREVIEWER_KIND=%s\nREVIEWER_RESET=%s\n' \
-  "$(field "$REVIEWER" 1)" "$(field "$REVIEWER" 2)" "$REVIEWER_KIND" "$(reset_for "$REVIEWER_KIND")"
-printf 'HUNK_PANE=%s\nSESSION=%s\nREPO=%s\n' "$HUNK" "$SESSION" "$ROOT"
+REVIEWER_NAME=$(field "$REVIEWER" 1); REVIEWER_RESET=$(reset_for "$REVIEWER_KIND")
+
+# Loopback probe: hunk's CLI reaches its daemon over 127.0.0.1, and a sandbox
+# that denies network denies that too. The orchestrator seeing the session
+# proves nothing about the reviewer, so the reviewer lists sessions itself.
+# The probe's reply stays out of the orchestrator's context, and the reviewer
+# is reset afterwards so the probe leaves nothing in its context either.
+REVIEWER_HUNK=skipped
+if [ "$PROBE" -eq 1 ]; then
+  herdr agent prompt "$REVIEWER_NAME" \
+    "Run: hunk session list --json. Reply with only the sessionId values, one per line, and nothing else." \
+    --wait --timeout 60000 >/dev/null 2>&1 || true
+  if herdr agent read "$REVIEWER_NAME" --source recent-unwrapped --lines 40 | grep -q "$SESSION"; then
+    REVIEWER_HUNK=ok
+    [ -n "$REVIEWER_RESET" ] && herdr agent prompt "$REVIEWER_NAME" "$REVIEWER_RESET" >/dev/null 2>&1 || true
+  else
+    cat >&2 <<EOM
+$REVIEWER_NAME cannot see hunk session $SESSION: its sandbox blocks loopback, so it cannot review.
+A codex reviewer must be launched with -c sandbox_workspace_write.network_access=true (an up-to-date orc does this).
+For another kind, allow loopback (127.0.0.1) in that CLI's sandbox settings, then run orc again.
+EOM
+    exit 2
+  fi
+fi
+
+OUT=$(
+  printf 'BASE=%s\n' "$BASE"
+  printf 'CODER_NAME=%s\nCODER_PANE=%s\nCODER_KIND=%s\nCODER_RESET=%s\n' \
+    "$(field "$CODER" 1)" "$(field "$CODER" 2)" "$CODER_KIND" "$(reset_for "$CODER_KIND")"
+  printf 'REVIEWER_NAME=%s\nREVIEWER_PANE=%s\nREVIEWER_KIND=%s\nREVIEWER_RESET=%s\nREVIEWER_HUNK=%s\n' \
+    "$REVIEWER_NAME" "$(field "$REVIEWER" 2)" "$REVIEWER_KIND" "$REVIEWER_RESET" "$REVIEWER_HUNK"
+  printf 'HUNK_PANE=%s\nSESSION=%s\nREPO=%s\n' "$HUNK" "$SESSION" "$ROOT"
+)
+ENV_DIR="$HOME/.agents/plans/$(basename "$ROOT")"
+mkdir -p "$ENV_DIR"
+printf '%s\n' "$OUT" > "$ENV_DIR/.siblings.env"
+printf '%s\n' "$OUT"

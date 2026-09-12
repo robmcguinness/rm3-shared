@@ -1,5 +1,7 @@
 The reviewer left feedback as hunk agent notes on your current changes for
 {{PLANS_DIR}}/{{CODENAME}}-unit-{{UNIT}}.md.
+If the unit file has a `Source:` line, read that section of the source file
+first; the unit file lists only what differs from it.
 1. Run: hunk session comment list {{SESSION}} --type agent
    Only outstanding notes are listed. Each summary starts with [blocking] or [nit].
 2. Resolve every [blocking] note (each has a file and line anchor). Handle a [nit]

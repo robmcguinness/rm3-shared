@@ -26,6 +26,8 @@ run are the hunk commands in this prompt and reads of the two plan files.
 2. Read the plan:
    - {{PLANS_DIR}}/{{CODENAME}}-description.md
    - {{PLANS_DIR}}/{{CODENAME}}-unit-{{UNIT}}.md
+   If the unit file has a `Source:` line, read that section of the source file
+   first; the unit file lists only what differs from it.
 3. If this is a re-review (the first line says so), first run
      hunk session comment list {{SESSION}} --type agent
    and remove every note the new diff resolves:

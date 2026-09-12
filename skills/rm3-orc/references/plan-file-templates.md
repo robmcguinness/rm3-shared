@@ -6,7 +6,7 @@ owns both files; the coder ticks boxes in the unit file and touches nothing else
 ## Contents
 - Description file template
 - Unit file template
-- Resume detection rules
+- Units from a supplied plan
 
 ## Description file template
 
@@ -18,6 +18,7 @@ owns both files; the coder ticks boxes in the unit file and touches nothing else
 Status: in-progress          <!-- set to `completed <YYYY-MM-DD>` in Phase 3 -->
 Repo: <absolute repo root>
 Created: <YYYY-MM-DD>
+Source plan: <absolute path>   <!-- only when the user handed over a plan file -->
 
 ## Goal
 
@@ -61,8 +62,9 @@ recount and rewrite the row. Never make a decision from the table alone.
 
 Depends on: <none | unit NN>
 Commit scope: <one sentence: what this commit delivers on its own>
-State: pending      <!-- pending | implementing | needs-review | needs-fix | ready-to-commit | committed <hash> -->
-Base: none          <!-- short HEAD hash when implementing began; the orchestrator sets it -->
+State: pending      <!-- pending | implementing | needs-review | needs-fix | ready-to-commit | committed <hash>; set-state.sh writes it -->
+Base: none          <!-- short HEAD hash when implementing began; set-state.sh sets it -->
+Source: <path>#<heading>   <!-- only when a Source plan exists: the section this unit implements -->
 
 ## Tasks
 
@@ -96,7 +98,7 @@ Base: none          <!-- short HEAD hash when implementing began; the orchestrat
 
 ## Review cycles
 
-<!-- Orchestrator appends one line per review: cycle N — pass|fail — note -->
+<!-- set-state.sh --review appends one line per review: cycle N — pass|fail — note -->
 ````
 
 Checkboxes say how far the **coder** got. `State` says which step of the **loop** the unit
@@ -105,25 +107,12 @@ review starts, so `N/N` alone cannot tell "implemented" from "committed". `Base`
 commit the unit builds on: it lets a resume prove a dirty tree is this unit's work
 (`git diff --stat <Base>`) and detect a commit nobody reviewed (`git log <Base>..HEAD`).
 
-## Resume detection rules
+## Units from a supplied plan
 
-A plan is **unfinished** when its description `Status` is not `completed`, or any unit
-file's `State` is not `committed <hash>`. Decide from the **unit files**, not the table.
+When the user hands over a plan file, the description carries `Source plan:` and each unit
+carries `Source: <path>#<heading>`. The unit's **Proposed changes** then lists only what
+differs from that section (a changed path, a dropped step, a tightened test), or the single
+line `As in the source section.` The coder and the reviewer read the source section first;
+the unit file is a pointer plus deltas, not a copy.
 
-On resume, recount every unit and rewrite the whole table first, so the user sees a true
-picture. Then take the first non-committed unit and enter the loop from this table.
-`Tree` is `git status --porcelain`; `Base` is the unit file's `Base` line.
-
-| `State` | Tree | Action |
-|---|---|---|
-| `pending` | clean | start the unit normally |
-| `pending` | dirty | stop and ask the user (the hard rule) |
-| `implementing` | any | **ask the user**: the coder may have stopped mid-edit. Show `git diff --stat <Base>` and let them choose: re-send implement (attempt 2), or hand-fix |
-| `needs-review` | dirty | confirm `git diff --stat <Base>` looks like this unit's work, then go to the review step |
-| `needs-fix` | dirty | go to the fix-cycle step; the notes still live in hunk |
-| `ready-to-commit` | dirty | go to the commit step |
-| any non-committed | clean, and `HEAD != Base` | the coder may have committed unreviewed. Show `git log <Base>..HEAD --oneline` and **ask the user** whether to review that range or revert |
-| any non-committed | clean, and `HEAD == Base` | no work exists. Treat as `pending` |
-
-If a worker may still be busy on the outstanding tag, recover with the tagged
-`pane wait-output` from the command reference; never re-send the prompt while it is busy.
+Resume rules live in [recovery.md](recovery.md).

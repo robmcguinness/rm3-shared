@@ -1,6 +1,8 @@
 Read the plan first:
 - High-level context, including its Decisions log: {{PLANS_DIR}}/{{CODENAME}}-description.md
 - Your unit: {{PLANS_DIR}}/{{CODENAME}}-unit-{{UNIT}}.md
+If the unit file has a `Source:` line, read that section of the source file
+first; the unit file lists only what differs from it.
 
 Implement ONLY this unit. Rules:
 1. Tick each checkbox under ## Tasks in the unit file as you complete the task.
