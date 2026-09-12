@@ -43,17 +43,19 @@ has no `no-restricted-syntax`). Kept apart from `anti-slop` so `antiSlopRulesOff
 
 - `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-node` jsPlugin
   by `@rm3/oxlint-config`.
-- `nodeCustomRules` — the five rules at `error`.
+- `nodeCustomRules` — the seven rules at `error`.
 
-| rule                          | reports                                                                                                                                                                                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `prefer-timers-promises`      | `new Promise((resolve) => setTimeout(resolve, ms))` and the `setImmediate` form. `node:timers/promises` returns the promise and takes an `AbortSignal`.                                                                                        |
-| `no-unguarded-json-parse`     | `JSON.parse(...)` with no enclosing `try` block in the same function. A schema `safeParse` on the result does not catch the `SyntaxError`. Off in `*.test.ts`.                                                                                 |
-| `no-manual-signal-handlers`   | `process.on` / `once` / `addListener` for `SIGTERM`, `SIGINT`, `SIGHUP`, `uncaughtException`, `unhandledRejection`, on the global or the `node:process` import.                                                                                |
-| `prefer-err-log-key`          | `log.error({ error }, ...)`: an identifier, member, call or `new` under the `error` key of a log call's fields. pino's error serializer is bound to `err`; anything else is JSON-stringified and an Error becomes `{}`. A string value passes. |
-| `no-log-string-interpolation` | A log message built with `${}` or `+` (`log.info(\`user ${id} created\`)`), in the first or, after a fields object, the second argument. Constant templates and pino's `%s` placeholders pass.                                                 |
+| rule                          | reports                                                                                                                                                                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prefer-timers-promises`      | `new Promise((resolve) => setTimeout(resolve, ms))` and the `setImmediate` form. `node:timers/promises` returns the promise and takes an `AbortSignal`.                                                                                               |
+| `no-unguarded-json-parse`     | `JSON.parse(...)` with no enclosing `try` block in the same function. A schema `safeParse` on the result does not catch the `SyntaxError`. Off in `*.test.ts`.                                                                                        |
+| `no-manual-signal-handlers`   | `process.on` / `once` / `addListener` for `SIGTERM`, `SIGINT`, `SIGHUP`, `uncaughtException`, `unhandledRejection`, on the global or the `node:process` import.                                                                                       |
+| `prefer-err-log-key`          | `log.error({ error }, ...)`: an identifier, member, call or `new` under the `error` key of a log call's fields. pino's error serializer is bound to `err`; anything else is JSON-stringified and an Error becomes `{}`. A string value passes.        |
+| `no-log-in-loop`              | A log call in the body of a `for` / `for..of` / `for..in` / `for await` / `while` / `do..while` in the same function. Stops at the nearest function, so a callback declared inside the loop passes; `forEach` / `map` are calls, not loops, and pass. |
+| `no-json-stringify-log`       | `JSON.stringify(...)` in the message slot of a log call (first argument, or second after a fields object). A stringified field value (`{ payload: JSON.stringify(x) }`) passes.                                                                       |
+| `no-log-string-interpolation` | A log message built with `${}` or `+` (`log.info(\`user ${id} created\`)`), in the first or, after a fields object, the second argument. Constant templates and pino's `%s` placeholders pass.                                                        |
 
-The two log rules match pino-shaped calls only: a level method (`trace`..`fatal`) on `x.log`
+The four log rules match pino-shaped calls only: a level method (`trace`..`fatal`) on `x.log`
 (`request.log`, `app.log`, `this.log`), a bare `log` / `logger`, or a `getLog()` / `getLogger(ctx)`
 call. A `??` / `||` between any of those logger shapes is also matched. `console.*` and a
 `.child()` result are not matched.

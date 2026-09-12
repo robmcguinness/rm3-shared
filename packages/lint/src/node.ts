@@ -1,5 +1,7 @@
 import { eslintCompatPlugin } from '@oxlint/plugins';
 
+import { noJsonStringifyLogRule } from './rules/no-json-stringify-log.ts';
+import { noLogInLoopRule } from './rules/no-log-in-loop.ts';
 import { noLogStringInterpolationRule } from './rules/no-log-string-interpolation.ts';
 import { noManualSignalHandlersRule } from './rules/no-manual-signal-handlers.ts';
 import { noUnguardedJsonParseRule } from './rules/no-unguarded-json-parse.ts';
@@ -14,6 +16,8 @@ import { preferTimersPromisesRule } from './rules/prefer-timers-promises.ts';
 const rm3NodePlugin = eslintCompatPlugin({
   meta: { name: 'rm3-node' },
   rules: {
+    'no-json-stringify-log': noJsonStringifyLogRule,
+    'no-log-in-loop': noLogInLoopRule,
     'no-log-string-interpolation': noLogStringInterpolationRule,
     'no-manual-signal-handlers': noManualSignalHandlersRule,
     'no-unguarded-json-parse': noUnguardedJsonParseRule,
@@ -28,12 +32,18 @@ export default rm3NodePlugin;
 // `antiSlopRules`: every value stays the literal `'error'` while the object
 // remains the mutable shape oxlint's `Config['rules']` accepts.
 export const nodeCustomRules: {
+  'rm3-node/no-json-stringify-log': 'error';
+  'rm3-node/no-log-in-loop': 'error';
   'rm3-node/no-log-string-interpolation': 'error';
   'rm3-node/no-manual-signal-handlers': 'error';
   'rm3-node/no-unguarded-json-parse': 'error';
   'rm3-node/prefer-err-log-key': 'error';
   'rm3-node/prefer-timers-promises': 'error';
 } = {
+  // logging-best-practices structure.md: pino serializes the fields; a stringified object is one unqueryable msg.
+  'rm3-node/no-json-stringify-log': 'error',
+  // logging-best-practices pitfalls.md: one event after the loop with counts, not one line per iteration.
+  'rm3-node/no-log-in-loop': 'error',
   // pino: a constant message with the values as fields, not `${}` in the message.
   'rm3-node/no-log-string-interpolation': 'error',
   // close-with-grace owns SIGTERM/SIGINT/uncaughtException/unhandledRejection.

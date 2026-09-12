@@ -30,12 +30,12 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `reactDoctorCapabilityRules`      | react-doctor rules gated on the environment, keyed `ssr`, `react-compiler`, `i18n` — spread after `reactDoctorRules`                                          |
 | `shadcnRulesOff`                  | `antiSlopRulesOff` plus the style rules vendored shadcn primitives trip                                                                                       |
 | `nodeRules`                       | already in `rm3Config`; `nodeRulesOn` plus `nodeRulesOff`, exported for overrides that set their own `plugins`                                                |
-| `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the five `rm3-node` plugin rules, opted in by name                               |
+| `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the seven `rm3-node` plugin rules, opted in by name                              |
 | `nodeRulesOff`                    | Node rules turned off on purpose, each with a reason                                                                                                          |
 | `nodeTestRulesOff`                | the Node rules the `**/*.test.ts` override relaxes; spread into your own override when tests live under another glob                                          |
 | `restrictedImportPaths`           | the `no-restricted-imports` list (packages a Node built-in replaces); extend it in an override rather than restating it                                       |
 | `rm3NodeJsPlugin`                 | already in `rm3Config`; the `rm3-node` jsPlugin entry, exported for overrides that set their own `plugins`                                                    |
-| `nodeCustomRules`                 | the five `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                                |
+| `nodeCustomRules`                 | the seven `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                               |
 | `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
 | `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
 | `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
@@ -99,11 +99,18 @@ what already-passing code has to look like:
 - `node/no-sync` (allowed at module level, off in tests), `unicorn/no-process-exit` and
   `promise/prefer-await-to-then` each expect a named per-line disable at the handful of sites
   where the pattern is the point: a CLI entrypoint, a promise-chain mutex.
-- Five rules from the `rm3-node` plugin in `@rm3/lint`: `prefer-timers-promises`,
+- Seven rules from the `rm3-node` plugin in `@rm3/lint`: `prefer-timers-promises`,
   `no-unguarded-json-parse`, `no-manual-signal-handlers`, and two pino log-shape rules from the
   `fastify-best-practices` skill's logging.md, `prefer-err-log-key` (an Error goes under `err`,
   the only key pino serializes) and `no-log-string-interpolation` (a constant message, values as
-  fields). See `packages/lint/README.md`.
+  fields), plus two rules from `logging-best-practices`: `no-log-in-loop` (one event after the
+  loop with counts and failed items) and `no-json-stringify-log` (pass the object as fields so it
+  stays queryable). See `packages/lint/README.md`.
+
+The logging skill's two-level-only policy is not a lint rule because it conflicts with the
+`node` and `fastify-best-practices` skills. Neither are its single-logger policy (only eval
+scripts and a deliberate fallback use a second one) or environment context in the logger base;
+a required `service` option on `@rm3/logger` is the stronger fix for the latter.
 
 `nodeRulesOff` records the deliberate exceptions: `node/no-top-level-await` (unicorn's
 `prefer-top-level-await` is on), `promise/avoid-new`, `typescript/promise-function-async`,

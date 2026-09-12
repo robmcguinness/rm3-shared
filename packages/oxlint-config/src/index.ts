@@ -421,8 +421,9 @@ export const restrictedImportPaths = [
 
 /**
  * Node rules from the off `style`, `restriction` and `nursery` categories,
- * opted in by name, plus the three `rm3-node` plugin rules. Each one encodes
- * a practice from the global `node` skill or `skills/rm3-nodejs`; the
+ * opted in by name, plus the seven `rm3-node` plugin rules. Each one encodes
+ * a practice from the global `node` skill, `skills/rm3-nodejs` or the
+ * `logging-best-practices` skill; the
  * comment names the rule file it comes from. Both consumer repos passed
  * every one of these at zero or near-zero hits when it was added, so they
  * are ratchets, not cleanups.
@@ -497,11 +498,15 @@ export const nodeRulesOn = {
   // --- rm3-nodejs modern-js-features.md ---
   'unicorn/prefer-structured-clone': 'error',
 
-  // --- logging.md (fastify-best-practices, pino through @rm3/logger) ---
+  // --- logging.md (fastify-best-practices) and logging-best-practices, pino through @rm3/logger ---
   // pino's error serializer is bound to `err`; `{ error }` logs `{}`.
   'rm3-node/prefer-err-log-key': nodeCustomRules['rm3-node/prefer-err-log-key'],
   // A constant message with the values as fields; `${}` makes every line unique.
   'rm3-node/no-log-string-interpolation': nodeCustomRules['rm3-node/no-log-string-interpolation'],
+  // logging-best-practices structure.md: pino serializes the fields object; `JSON.stringify` lands it in `msg`.
+  'rm3-node/no-json-stringify-log': nodeCustomRules['rm3-node/no-json-stringify-log'],
+  // logging-best-practices pitfalls.md: one event after the loop, not one line per iteration.
+  'rm3-node/no-log-in-loop': nodeCustomRules['rm3-node/no-log-in-loop'],
 
   // --- environment.md, logging.md, testing.md: built-ins over packages ---
   'no-restricted-imports': ['error', { paths: restrictedImportPaths }],
