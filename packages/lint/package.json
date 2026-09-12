@@ -12,6 +12,10 @@
       "source": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./fastify": {
+      "source": "./src/fastify.ts",
+      "default": "./src/fastify.ts"
+    },
     "./node": {
       "source": "./src/node.ts",
       "default": "./src/node.ts"

@@ -5,13 +5,21 @@ import type { OxlintConfig } from 'oxlint';
 import type { Capability, RuleFramework } from 'oxlint-plugin-react-doctor/core';
 
 import { antiSlopRules, antiSlopRulesOff, complexityRules } from '@rm3/lint';
+import { fastifyCustomRules } from '@rm3/lint/fastify';
 import { nodeCustomRules } from '@rm3/lint/node';
 import { tailwindCustomRules } from '@rm3/lint/tailwind';
 // The `core` entry is rule metadata only (31 ms to import); the root entry is
 // the plugin itself, which oxlint loads through `reactDoctorJsPlugin` below.
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
-export { antiSlopRules, antiSlopRulesOff, complexityRules, nodeCustomRules, tailwindCustomRules };
+export {
+  antiSlopRules,
+  antiSlopRulesOff,
+  complexityRules,
+  fastifyCustomRules,
+  nodeCustomRules,
+  tailwindCustomRules,
+};
 
 /**
  * React plugins already in `rm3Config.plugins`. Exported for consumer
@@ -359,6 +367,16 @@ export const rm3TailwindJsPlugin = {
 } satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
 
 /**
+ * The `rm3-fastify` plugin from `@rm3/lint`, resolved HERE for the same
+ * reason as `rm3NodeJsPlugin`. Already in `rm3Config.jsPlugins`; exported for
+ * the test and for consumer overrides.
+ */
+export const rm3FastifyJsPlugin = {
+  name: 'rm3-fastify',
+  specifier: import.meta.resolve('@rm3/lint/fastify'),
+} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
+
+/**
  * Packages the `node` and `rm3-nodejs` skills replace with a built-in, each
  * with the replacement in its message. One list feeds both the base
  * `no-restricted-imports` and the test override, which has to restate it
@@ -479,6 +497,12 @@ export const nodeRulesOn = {
   // --- rm3-nodejs modern-js-features.md ---
   'unicorn/prefer-structured-clone': 'error',
 
+  // --- logging.md (fastify-best-practices, pino through @rm3/logger) ---
+  // pino's error serializer is bound to `err`; `{ error }` logs `{}`.
+  'rm3-node/prefer-err-log-key': nodeCustomRules['rm3-node/prefer-err-log-key'],
+  // A constant message with the values as fields; `${}` makes every line unique.
+  'rm3-node/no-log-string-interpolation': nodeCustomRules['rm3-node/no-log-string-interpolation'],
+
   // --- environment.md, logging.md, testing.md: built-ins over packages ---
   'no-restricted-imports': ['error', { paths: restrictedImportPaths }],
 } satisfies NonNullable<OxlintConfig['rules']>;
@@ -561,6 +585,23 @@ export const tailwindRulesOn = {
   // SKILL.md 7: `bg-${color}-600` is never emitted; Tailwind only generates
   // classes it finds whole in source.
   'rm3-tailwind/no-dynamic-class-names': tailwindCustomRules['rm3-tailwind/no-dynamic-class-names'],
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
+ * The three `rm3-fastify` plugin rules, each a practice from the
+ * `fastify-best-practices` skill a linter can decide from the call shape. On
+ * for every file: they key on `addHook`, `fp()` and the handler signature, so
+ * a file without Fastify pays nothing. None has an oxlint counterpart.
+ */
+export const fastifyRulesOn = {
+  // hooks.md: hooks are async; the `done` form is legacy, and an async hook
+  // that also takes `done` runs the chain twice.
+  'rm3-fastify/no-callback-hooks': fastifyCustomRules['rm3-fastify/no-callback-hooks'],
+  // plugins.md: `dependencies` resolve by name, so every `fp()` carries one.
+  'rm3-fastify/require-plugin-name': fastifyCustomRules['rm3-fastify/require-plugin-name'],
+  // routes.md / hooks.md: `return reply.send(...)` (or `await`) in an async
+  // handler or hook, so the chain stops when the response goes out.
+  'rm3-fastify/return-reply': fastifyCustomRules['rm3-fastify/return-reply'],
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
@@ -651,6 +692,7 @@ export const rm3Config: OxlintConfig = {
     },
     rm3NodeJsPlugin,
     rm3TailwindJsPlugin,
+    rm3FastifyJsPlugin,
     reactDoctorJsPlugin,
   ],
   options: {
@@ -877,6 +919,8 @@ export const rm3Config: OxlintConfig = {
     ...nodeRules,
     // --- Tailwind (skills/rm3-tailwind) ---
     ...tailwindRulesOn,
+    // --- Fastify (fastify-best-practices skill) ---
+    ...fastifyRulesOn,
   },
 };
 

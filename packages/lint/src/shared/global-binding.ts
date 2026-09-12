@@ -1,6 +1,7 @@
 import type { ESTree, Scope, SourceCode, Variable } from '@oxlint/plugins';
 
-function resolveVariable(
+/** The variable an identifier reference resolves to, walking up from its scope; null for an unbound global. */
+export function resolveVariable(
   sourceCode: SourceCode,
   identifier: ESTree.IdentifierReference,
 ): Variable | null {
@@ -88,4 +89,16 @@ export function memberPropertyName(callee: ESTree.Expression): string | null {
       : null;
   }
   return property.type === 'Identifier' ? property.name : null;
+}
+
+/**
+ * The key of `{ name: 1 }`, `{ 'name': 1 }` or `{ ['name']: 1 }`, or null for
+ * a computed key that is not a string literal.
+ */
+export function objectPropertyName(property: ESTree.ObjectProperty): string | null {
+  const { key } = property;
+  if (key.type === 'Literal') {
+    return typeof key.value === 'string' ? key.value : null;
+  }
+  return key.type === 'Identifier' && !property.computed ? key.name : null;
 }

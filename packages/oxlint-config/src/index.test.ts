@@ -14,10 +14,12 @@ import reactDoctorPlugin, {
 } from 'oxlint-plugin-react-doctor';
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
+import rm3FastifyPlugin from '@rm3/lint/fastify';
 import rm3NodePlugin from '@rm3/lint/node';
 import rm3TailwindPlugin from '@rm3/lint/tailwind';
 
 import {
+  fastifyRulesOn,
   nodeRulesOff,
   nodeRulesOn,
   nodeTestRulesOff,
@@ -31,6 +33,7 @@ import {
   reactPlugins,
   reactRules,
   rm3Config,
+  rm3FastifyJsPlugin,
   rm3NodeJsPlugin,
   rm3TailwindJsPlugin,
   shadcnRulesOff,
@@ -416,6 +419,35 @@ describe('tailwindRules', () => {
     const off = new Map(Object.entries(shadcnRulesOff));
     for (const id of Object.keys(rm3TailwindPlugin.rules)) {
       assert.equal(off.get(`${RM3_TAILWIND_PREFIX}${id}`), 'off', `rm3-tailwind/${id} is on`);
+    }
+  });
+});
+
+describe('fastifyRules', () => {
+  const RM3_FASTIFY_PREFIX = 'rm3-fastify/';
+
+  test('names only rules the rm3-fastify plugin registers', () => {
+    for (const key of Object.keys(fastifyRulesOn)) {
+      assert.ok(key.startsWith(RM3_FASTIFY_PREFIX), `${key} is not an rm3-fastify rule`);
+      assert.ok(
+        key.slice(RM3_FASTIFY_PREFIX.length) in rm3FastifyPlugin.rules,
+        `${key} is not an rm3-fastify plugin rule`,
+      );
+    }
+  });
+
+  test('names every rm3-fastify plugin rule', () => {
+    for (const id of Object.keys(rm3FastifyPlugin.rules)) {
+      assert.ok(`${RM3_FASTIFY_PREFIX}${id}` in fastifyRulesOn, `rm3-fastify/${id} is not enabled`);
+    }
+    assert.equal(rm3FastifyJsPlugin.name, rm3FastifyPlugin.meta?.name);
+    assert.ok(rm3FastifyJsPlugin.specifier.startsWith('file://'));
+    assert.ok(rm3Config.jsPlugins?.includes(rm3FastifyJsPlugin), 'rm3-fastify is not in jsPlugins');
+  });
+
+  test('includes the Fastify rules without shadowing decisions', () => {
+    for (const [key, setting] of Object.entries(fastifyRulesOn)) {
+      assert.deepEqual(rm3Config.rules?.[key], setting, `${key} missing`);
     }
   });
 });

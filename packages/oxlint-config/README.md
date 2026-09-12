@@ -30,15 +30,18 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `reactDoctorCapabilityRules`      | react-doctor rules gated on the environment, keyed `ssr`, `react-compiler`, `i18n` — spread after `reactDoctorRules`                                          |
 | `shadcnRulesOff`                  | `antiSlopRulesOff` plus the style rules vendored shadcn primitives trip                                                                                       |
 | `nodeRules`                       | already in `rm3Config`; `nodeRulesOn` plus `nodeRulesOff`, exported for overrides that set their own `plugins`                                                |
-| `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the three `rm3-node` plugin rules, opted in by name                              |
+| `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the five `rm3-node` plugin rules, opted in by name                               |
 | `nodeRulesOff`                    | Node rules turned off on purpose, each with a reason                                                                                                          |
 | `nodeTestRulesOff`                | the Node rules the `**/*.test.ts` override relaxes; spread into your own override when tests live under another glob                                          |
 | `restrictedImportPaths`           | the `no-restricted-imports` list (packages a Node built-in replaces); extend it in an override rather than restating it                                       |
 | `rm3NodeJsPlugin`                 | already in `rm3Config`; the `rm3-node` jsPlugin entry, exported for overrides that set their own `plugins`                                                    |
-| `nodeCustomRules`                 | the three `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                               |
+| `nodeCustomRules`                 | the five `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                                |
 | `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
 | `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
 | `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
+| `fastifyRulesOn`                  | already in `rm3Config`; the three `rm3-fastify` plugin rules                                                                                                  |
+| `rm3FastifyJsPlugin`              | already in `rm3Config`; the `rm3-fastify` jsPlugin entry, exported for overrides that set their own `plugins`                                                 |
+| `fastifyCustomRules`              | the three `rm3-fastify` plugin rules at `error`, re-exported from `@rm3/lint/fastify`                                                                         |
 
 React and react-doctor are on by default in `rm3Config`. An explicit plugin list REPLACES
 the base list, so overrides that set `plugins` must include `reactPlugins` to retain React.
@@ -96,8 +99,11 @@ what already-passing code has to look like:
 - `node/no-sync` (allowed at module level, off in tests), `unicorn/no-process-exit` and
   `promise/prefer-await-to-then` each expect a named per-line disable at the handful of sites
   where the pattern is the point: a CLI entrypoint, a promise-chain mutex.
-- Three rules from the `rm3-node` plugin in `@rm3/lint`: `prefer-timers-promises`,
-  `no-unguarded-json-parse`, `no-manual-signal-handlers`. See `packages/lint/README.md`.
+- Five rules from the `rm3-node` plugin in `@rm3/lint`: `prefer-timers-promises`,
+  `no-unguarded-json-parse`, `no-manual-signal-handlers`, and two pino log-shape rules from the
+  `fastify-best-practices` skill's logging.md, `prefer-err-log-key` (an Error goes under `err`,
+  the only key pino serializes) and `no-log-string-interpolation` (a constant message, values as
+  fields). See `packages/lint/README.md`.
 
 `nodeRulesOff` records the deliberate exceptions: `node/no-top-level-await` (unicorn's
 `prefer-top-level-await` is on), `promise/avoid-new`, `typescript/promise-function-async`,
@@ -153,6 +159,31 @@ rules: {
 
 The skill's other practices are not lint rules: `@apply` lives in CSS, which oxlint does not
 read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
+
+## Fastify rules
+
+`fastifyRulesOn` turns the three practices in the `fastify-best-practices` skill that a linter
+can decide from the call shape into ratchets, all from the `rm3-fastify` plugin in `@rm3/lint`
+(see `packages/lint/README.md`):
+
+- `rm3-fastify/return-reply`: `return reply.send(...)` (or `await` it) inside an async handler
+  or hook. A bare send leaves the hook chain and handler running after the response is out.
+- `rm3-fastify/no-callback-hooks`: hooks are `async (request, reply) => {}`; the `done` form is
+  the legacy signature, and an async hook that also takes `done` runs the chain twice.
+- `rm3-fastify/require-plugin-name`: every `fp(plugin, { name })`. Fastify resolves
+  `dependencies` by name and refuses a named plugin twice; an unnamed one gets neither.
+
+All three are on for every file and key on `addHook`, the `fastify-plugin` import and the
+handler signature, so a file without Fastify pays nothing. Two limits worth knowing: a function
+is a handler when it is passed to `get`/`post`/.../`route`/`addHook`/`setErrorHandler`, sits
+under a handler key in route options, or has a `FastifyRequest`/`FastifyReply` parameter type,
+so an Express `router.get(url, async (req, res) => { res.send() })` matches too; and a hook
+passed by reference (`addHook('onRequest', securityHook)`) is not inspected.
+
+Not lint rules, on purpose: a schema on every route (every route in the consumer repos is an
+oRPC catch-all or a document route, so it would only report false positives), `fastify-plugin`
+around every decorator (whether a decorator must escape encapsulation is intent), and a
+reference-typed `decorateRequest` default (Fastify throws `FST_ERR_DEC_REFERENCE_TYPE` at boot).
 
 ## react-doctor runs inside oxlint
 
