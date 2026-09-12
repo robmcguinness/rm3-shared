@@ -143,6 +143,8 @@ describe('createFastifyLogger', () => {
   test('drives Fastify request logging with the allow-listed req and the default res', async () => {
     const sink = capture();
     const app = Fastify({
+      genReqId: () => 'test-request-id',
+      // oxlint-disable-next-line rm3-fastify/no-default-request-logging -- this test verifies the serializers on Fastify's default request log lines.
       loggerInstance: createFastifyLogger({ level: 'info', pretty: false }, sink.stream),
     });
     app.get('/health', async () => ({ ok: true }));

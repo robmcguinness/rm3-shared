@@ -39,9 +39,9 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
 | `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
 | `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
-| `fastifyRulesOn`                  | already in `rm3Config`; the three `rm3-fastify` plugin rules                                                                                                  |
+| `fastifyRulesOn`                  | already in `rm3Config`; the five `rm3-fastify` plugin rules                                                                                                   |
 | `rm3FastifyJsPlugin`              | already in `rm3Config`; the `rm3-fastify` jsPlugin entry, exported for overrides that set their own `plugins`                                                 |
-| `fastifyCustomRules`              | the three `rm3-fastify` plugin rules at `error`, re-exported from `@rm3/lint/fastify`                                                                         |
+| `fastifyCustomRules`              | the five `rm3-fastify` plugin rules at `error`, re-exported from `@rm3/lint/fastify`                                                                          |
 
 React and react-doctor are on by default in `rm3Config`. An explicit plugin list REPLACES
 the base list, so overrides that set `plugins` must include `reactPlugins` to retain React.
@@ -162,23 +162,32 @@ read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
 
 ## Fastify rules
 
-`fastifyRulesOn` turns the three practices in the `fastify-best-practices` skill that a linter
-can decide from the call shape into ratchets, all from the `rm3-fastify` plugin in `@rm3/lint`
-(see `packages/lint/README.md`):
+`fastifyRulesOn` turns the five practices in the `fastify-best-practices` and
+`logging-best-practices` skills that a linter can decide from the call shape into ratchets, all
+from the `rm3-fastify` plugin in `@rm3/lint` (see `packages/lint/README.md`):
 
 - `rm3-fastify/return-reply`: `return reply.send(...)` (or `await` it) inside an async handler
   or hook. A bare send leaves the hook chain and handler running after the response is out.
 - `rm3-fastify/no-callback-hooks`: hooks are `async (request, reply) => {}`; the `done` form is
   the legacy signature, and an async hook that also takes `done` runs the chain twice.
+- `rm3-fastify/no-default-request-logging`: when a logger is configured, provide a
+  `logController` (such as `new LogController({ disableRequestLogging: true })`) or set
+  `disableRequestLogging` to anything other than literal `false`, then emit the one wide event
+  from `onResponse` instead of Fastify's two default request lines.
+- `rm3-fastify/require-gen-req-id`: configure `genReqId` so request ids remain unique across
+  process restarts and instances instead of using Fastify's per-process counter. An options
+  identifier, a call, or an object literal with a spread is opaque and passes both factory rules.
 - `rm3-fastify/require-plugin-name`: every `fp(plugin, { name })`. Fastify resolves
   `dependencies` by name and refuses a named plugin twice; an unnamed one gets neither.
 
-All three are on for every file and key on `addHook`, the `fastify-plugin` import and the
-handler signature, so a file without Fastify pays nothing. Two limits worth knowing: a function
-is a handler when it is passed to `get`/`post`/.../`route`/`addHook`/`setErrorHandler`, sits
-under a handler key in route options, or has a `FastifyRequest`/`FastifyReply` parameter type,
-so an Express `router.get(url, async (req, res) => { res.send() })` matches too; and a hook
-passed by reference (`addHook('onRequest', securityHook)`) is not inspected.
+All five are on for every file and key on `addHook`, the `fastify` or `fastify-plugin` import
+and the handler signature, so a file without Fastify pays nothing. Three limits worth knowing:
+a function is a handler when it is passed to
+`get`/`post`/.../`route`/`addHook`/`setErrorHandler`, sits under a handler key in route options,
+or has a `FastifyRequest`/`FastifyReply` parameter type, so an Express
+`router.get(url, async (req, res) => { res.send() })` matches too; a hook passed by reference
+(`addHook('onRequest', securityHook)`) is not inspected; and the factory rules do not match a
+namespace import such as `import * as f from 'fastify'; f.fastify()`.
 
 Not lint rules, on purpose: a schema on every route (every route in the consumer repos is an
 oRPC catch-all or a document route, so it would only report false positives), `fastify-plugin`

@@ -81,13 +81,18 @@ apart from `rm3-node` because the rules key on Fastify's API rather than on Node
 
 - `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-fastify` jsPlugin
   by `@rm3/oxlint-config`.
-- `fastifyCustomRules` — the three rules at `error`.
+- `fastifyCustomRules` — the five rules at `error`.
 
-| rule                  | reports                                                                                                                                                                                                                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `return-reply`        | `reply.send(...)`, `.redirect`, `.callNotFound` or `.sendFile` as a bare statement (not returned, not awaited) inside an async handler or hook, where `reply` is that function's own parameter. A sync handler, a nested callback, or a local named `reply` passes.                              |
-| `no-callback-hooks`   | `addHook(name, fn)` or a route-option hook (`{ preHandler: [fn] }`) whose function takes more parameters than the hook's async signature, i.e. a `done`. Reported for sync and async functions alike; `onRoute` / `onRegister` are sync by design and skipped, as is a hook passed by reference. |
-| `require-plugin-name` | A call to the `fastify-plugin` default (or `fastifyPlugin`) import with no second argument, a string second argument, or an options literal with no `name`. An identifier or a spread in the options is opaque and passes.                                                                       |
+| rule                         | reports                                                                                                                                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `return-reply`               | `reply.send(...)`, `.redirect`, `.callNotFound` or `.sendFile` as a bare statement (not returned, not awaited) inside an async handler or hook, where `reply` is that function's own parameter. A sync handler, a nested callback, or a local named `reply` passes.                              |
+| `no-callback-hooks`          | `addHook(name, fn)` or a route-option hook (`{ preHandler: [fn] }`) whose function takes more parameters than the hook's async signature, i.e. a `done`. Reported for sync and async functions alike; `onRoute` / `onRegister` are sync by design and skipped, as is a hook passed by reference. |
+| `no-default-request-logging` | A `fastify()` options literal with `loggerInstance`, or a `logger` other than `false`, and neither a `logController` nor a `disableRequestLogging` that is not literally `false`. Opaque options pass.                                                                                           |
+| `require-gen-req-id`         | A call to the `fastify` default (or named `fastify`) import with no options, or an options literal with no `genReqId`. An identifier, a call, or a spread in the options is opaque and passes.                                                                                                   |
+| `require-plugin-name`        | A call to the `fastify-plugin` default (or `fastifyPlugin`) import with no second argument, a string second argument, or an options literal with no `name`. An identifier or a spread in the options is opaque and passes.                                                                       |
+
+The Fastify factory rules do not match a namespace import such as
+`import * as f from 'fastify'; f.fastify()`.
 
 A function counts as a Fastify handler when it is an argument to `get` / `head` / `post` / `put`
 / `delete` / `options` / `patch` / `all` / `route` / `addHook` / `setErrorHandler` /

@@ -588,15 +588,23 @@ export const tailwindRulesOn = {
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
- * The three `rm3-fastify` plugin rules, each a practice from the
- * `fastify-best-practices` skill a linter can decide from the call shape. On
- * for every file: they key on `addHook`, `fp()` and the handler signature, so
- * a file without Fastify pays nothing. None has an oxlint counterpart.
+ * The five `rm3-fastify` plugin rules, each a practice from the
+ * `fastify-best-practices` or `logging-best-practices` skill a linter can
+ * decide from the call shape. On for every file: they key on `addHook`,
+ * `fp()`, the `fastify` import and the handler signature, so a file without
+ * Fastify pays nothing. None has an oxlint counterpart.
  */
 export const fastifyRulesOn = {
   // hooks.md: hooks are async; the `done` form is legacy, and an async hook
   // that also takes `done` runs the chain twice.
   'rm3-fastify/no-callback-hooks': fastifyCustomRules['rm3-fastify/no-callback-hooks'],
+  // logging-best-practices wide-events.md / pitfalls.md: one wide event per
+  // request; Fastify's `incoming request` / `request completed` pair is noise.
+  'rm3-fastify/no-default-request-logging':
+    fastifyCustomRules['rm3-fastify/no-default-request-logging'],
+  // logging-best-practices wide-events.md: `genReqId: () => randomUUID()`; the
+  // default counter restarts at 1 per process, so `reqId` cannot be joined.
+  'rm3-fastify/require-gen-req-id': fastifyCustomRules['rm3-fastify/require-gen-req-id'],
   // plugins.md: `dependencies` resolve by name, so every `fp()` carries one.
   'rm3-fastify/require-plugin-name': fastifyCustomRules['rm3-fastify/require-plugin-name'],
   // routes.md / hooks.md: `return reply.send(...)` (or `await`) in an async
