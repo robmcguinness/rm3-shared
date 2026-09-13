@@ -46,7 +46,7 @@ function findPairs(
 
 /**
  * Report a `w-*` / `h-*` pair with the same value in one class string; `size-*`
- * sets both (skills/rm3-shadcn, rule 2).
+ * sets both (shadcn skill, rules/styling.md).
  */
 export const preferSizeUtilityRule = defineRule({
   createOnce(context) {

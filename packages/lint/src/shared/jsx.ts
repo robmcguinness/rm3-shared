@@ -1,4 +1,9 @@
-import { isClassAttribute, staticTokenGroups, walkClassExpression } from '#shared/class-strings.ts';
+import {
+  isClassAttribute,
+  staticTokenGroups,
+  utilityOf,
+  walkClassExpression,
+} from '#shared/class-strings.ts';
 
 import type { ClassToken, ClassValueVisitor } from '#shared/class-strings.ts';
 
@@ -31,6 +36,37 @@ export function attribute(
     }
   }
   return null;
+}
+
+/** Whether the opening element carries `{...props}`, which may hold any attribute. */
+export function hasSpreadAttribute(node: ESTree.JSXOpeningElement): boolean {
+  return node.attributes.some((item) => item.type === 'JSXSpreadAttribute');
+}
+
+/**
+ * What an attribute is set to, looking through the expression container,
+ * parentheses and TypeScript casts: the string literal of `a="x"`, the
+ * expression of `a={x}`, the element of `a={<X />}` or `a=<X />`. Null for a
+ * bare `a` and for `a={}`.
+ */
+export function attributeValue(
+  node: ESTree.JSXAttribute,
+): ESTree.Expression | ESTree.JSXElement | ESTree.JSXFragment | null {
+  const { value } = node;
+  if (value === null) {
+    return null;
+  }
+  if (value.type !== 'JSXExpressionContainer') {
+    return value;
+  }
+  if (value.expression.type === 'JSXEmptyExpression') {
+    return null;
+  }
+  let expression: ESTree.Expression = value.expression;
+  for (let inner = unwrapped(expression); inner !== null; inner = unwrapped(expression)) {
+    expression = inner;
+  }
+  return expression;
 }
 
 /**
@@ -251,6 +287,22 @@ export function meaningfulChildren(node: ESTree.JSXElement): ESTree.JSXChild[] {
 }
 
 /**
+ * The elements rendered directly under `node`: `descendantElements` without
+ * descent, so each element is listed and its own children are not. Looks
+ * through fragments, `{cond && <A />}`, ternaries and `.map()` like the walk.
+ */
+export function childElements(node: ESTree.JSXElement): ESTree.JSXElement[] {
+  return descendantElements(node, () => true);
+}
+
+/** The one meaningful child of `node` when it is an element; null otherwise. */
+export function singleElementChild(node: ESTree.JSXElement): ESTree.JSXElement | null {
+  const children = meaningfulChildren(node);
+  const [only] = children;
+  return children.length === 1 && only.type === 'JSXElement' ? only : null;
+}
+
+/**
  * Like `walkClassExpression`, but a call or tagged template in a `className`
  * is a class position whatever its callee (`cn`, a local `classes()`), so
  * their arguments are walked too.
@@ -322,4 +374,20 @@ export function classTokensOf(node: ESTree.JSXOpeningElement): ClassToken[] {
     }
   }
   return tokens;
+}
+
+/**
+ * The first static class token of `node` whose utility (variants, `!`, `-`
+ * and modifier stripped) satisfies `test`, or null.
+ */
+export function classTokenMatching(
+  node: ESTree.JSXOpeningElement,
+  test: (utility: string, token: string) => boolean,
+): ClassToken | null {
+  for (const entry of classTokensOf(node)) {
+    if (test(utilityOf(entry.token), entry.token)) {
+      return entry;
+    }
+  }
+  return null;
 }

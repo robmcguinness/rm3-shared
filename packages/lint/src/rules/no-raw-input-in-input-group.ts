@@ -30,7 +30,7 @@ function inInputGroup(node: Parameters<typeof enclosingElement>[0]): boolean {
 /**
  * Report a raw `Input` or `Textarea` inside an `InputGroup`; the group's
  * own controls drop their border and ring so the group draws one
- * (skills/rm3-shadcn, rule 9).
+ * (shadcn skill, rules/forms.md).
  */
 export const noRawInputInInputGroupRule = defineRule({
   createOnce(context) {

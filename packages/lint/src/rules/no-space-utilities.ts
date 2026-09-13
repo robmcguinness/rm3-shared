@@ -13,7 +13,7 @@ const SPACE_UTILITY = /^space-([xy])-/;
 
 /**
  * Report `space-x-*` / `space-y-*`; a flex container with `gap-*` spaces its
- * children without margin hacks (skills/rm3-shadcn, rule 1).
+ * children without margin hacks (shadcn skill, rules/styling.md).
  */
 export const noSpaceUtilitiesRule = defineRule({
   createOnce(context) {

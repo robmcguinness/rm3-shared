@@ -103,7 +103,7 @@ const CONTAINERS: ReadonlySet<string> = new Set(PARTS.keys());
 /**
  * Report a `DialogContent` / `SheetContent` / `DrawerContent` /
  * `AlertDialogContent` with no Title, or an `Avatar` with no
- * `AvatarFallback` (skills/rm3-shadcn, rule 8). Content the linter cannot
+ * `AvatarFallback` (shadcn skill, rules/composition.md). Content the linter cannot
  * see suppresses the report: `{children}`, a spread, or a family-named
  * component it does not know (`EditProfileDialogBody`) that may render the part.
  */

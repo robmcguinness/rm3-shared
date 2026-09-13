@@ -27,8 +27,8 @@ function readOptions(option?: unknown): Options {
 
 /**
  * Report a `dark:` color override (`dark:bg-gray-950`, `dark:text-white`);
- * semantic tokens switch with the theme on their own (skills/rm3-shadcn,
- * rule 5). By default only palette values report; `strict` also reports a
+ * semantic tokens switch with the theme on their own (shadcn skill,
+ * rules/styling.md). By default only palette values report; `strict` also reports a
  * `dark:` on a semantic token (`dark:bg-success/20`).
  */
 export const noDarkColorOverridesRule = defineRule({

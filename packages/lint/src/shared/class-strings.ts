@@ -46,6 +46,23 @@ export function readBooleanOption(option: unknown, key: string, fallback: boolea
   return typeof value === 'boolean' ? value : fallback;
 }
 
+/**
+ * The string option `key` when it is one of `allowed`, or `fallback` when the
+ * option is absent, malformed or not an allowed value.
+ */
+export function readStringOption<const T extends string>(
+  option: unknown,
+  key: string,
+  fallback: T,
+  allowed: readonly T[],
+): T {
+  if (!isRecord(option)) {
+    return fallback;
+  }
+  const value = option[key];
+  return allowed.find((entry) => entry === value) ?? fallback;
+}
+
 /** The name of `cn(...)` or `styles.cn(...)`, or null for a computed callee. */
 export function calleeName(callee: ESTree.Expression): string | null {
   return callee.type === 'Identifier' ? callee.name : memberPropertyName(callee);

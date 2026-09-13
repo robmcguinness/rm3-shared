@@ -34,7 +34,7 @@ const FAMILIES: ReadonlyMap<string, Family> = new Map<string, Family>([
 
 /**
  * Report an item rendered directly in its content container; each family
- * has a group element the items belong in (skills/rm3-shadcn, rule 7). The
+ * has a group element the items belong in (shadcn skill, rules/composition.md). The
  * check looks through `.map()` callbacks, so a mapped list of items directly
  * in the container reports too.
  */

@@ -1,7 +1,13 @@
 import { defineRule } from '@oxlint/plugins';
 
 import { utilityOf } from '#shared/class-strings.ts';
-import { attribute, classTokensOf, elementName, meaningfulChildren } from '#shared/jsx.ts';
+import {
+  attribute,
+  classTokensOf,
+  elementName,
+  hasSpreadAttribute,
+  meaningfulChildren,
+} from '#shared/jsx.ts';
 import { createIconMatcher, ICON_SCHEMA_PROPERTIES } from '#shared/icons.ts';
 
 import type { ESTree } from '@oxlint/plugins';
@@ -30,7 +36,7 @@ function isVisuallyHidden(child: ESTree.JSXChild): boolean {
 /**
  * Report an icon beside text inside a `Button` with no `data-icon`; the
  * attribute is what the button's CSS keys its icon gap and padding on
- * (skills/rm3-shadcn, rule 11). An icon-only button passes: `size="icon*"`,
+ * (shadcn skill, rules/icons.md). An icon-only button passes: `size="icon*"`,
  * a single child, or an icon beside an `sr-only` label.
  */
 export const requireIconDataIconRule = defineRule({
@@ -57,7 +63,10 @@ export const requireIconDataIconRule = defineRule({
           if (icon === null || !isIcon(icon, openingElement)) {
             continue;
           }
-          if (attribute(openingElement, 'data-icon') !== null || hasSpread(openingElement)) {
+          if (
+            attribute(openingElement, 'data-icon') !== null ||
+            hasSpreadAttribute(openingElement)
+          ) {
             continue;
           }
           const position =
@@ -90,7 +99,3 @@ export const requireIconDataIconRule = defineRule({
     type: 'problem',
   },
 });
-
-function hasSpread(node: ESTree.JSXOpeningElement): boolean {
-  return node.attributes.some((item) => item.type === 'JSXSpreadAttribute');
-}

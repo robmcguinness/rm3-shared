@@ -590,8 +590,7 @@ export const nodeTestRulesOff = {
 
 /**
  * The two `rm3-tailwind` plugin rules, the Tailwind practices a linter can
- * check from class strings alone (`skills/rm3-tailwind` defers them here under
- * "Enforced by lint"). On for every file: they match `className` and
+ * check from class strings alone. On for every file: they match `className` and
  * `cn`/`cva` calls, so a Node file pays nothing. Neither rule has an oxlint
  * counterpart.
  */
@@ -606,44 +605,71 @@ export const tailwindRulesOn = {
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
- * The twelve `rm3-shadcn` plugin rules, each a numbered practice from
- * `skills/rm3-shadcn` a linter can check from JSX and class strings. On for
+ * The twenty-one `rm3-shadcn` plugin rules, each a practice from the global
+ * `shadcn` skill's `rules/*.md` a linter can check from JSX and class
+ * strings. On for
  * every file: they match `className`, the class helpers and shadcn component
  * names, so a Node file pays nothing. None has an oxlint counterpart.
  */
 export const shadcnRulesOn = {
-  // SKILL.md 6: `${a ? b : c}` in a className template; `cn()` takes the condition.
+  // base-vs-radix.md: `asChild`, `SelectContent position`, `ToggleGroup
+  // type` on a Base UI project (or `render`, `multiple` on Radix). A Radix
+  // project sets `['error', { base: 'radix' }]`.
+  'rm3-shadcn/no-base-api-mismatch': shadcnCustomRules['rm3-shadcn/no-base-api-mismatch'],
+  // composition.md: `isLoading` / `isPending` on `Button`; `Spinner` with
+  // `data-icon` and `disabled` instead.
+  'rm3-shadcn/no-button-loading-prop': shadcnCustomRules['rm3-shadcn/no-button-loading-prop'],
+  // styling.md: `${a ? b : c}` in a className template; `cn()` takes the condition.
   'rm3-shadcn/no-conditional-class-template':
     shadcnCustomRules['rm3-shadcn/no-conditional-class-template'],
-  // SKILL.md 5: `dark:bg-gray-950` picks a color the semantic token already
+  // styling.md: `dark:bg-gray-950` picks a color the semantic token already
   // decides. Palette values only; `['error', { strict: true }]` also reports
   // a `dark:` on a semantic token.
   'rm3-shadcn/no-dark-color-overrides': shadcnCustomRules['rm3-shadcn/no-dark-color-overrides'],
-  // SKILL.md 12: `size-4` on an icon inside `Button`, `DropdownMenuItem`,
+  // icons.md: `size-4` on an icon inside `Button`, `DropdownMenuItem`,
   // `Alert`, `Sidebar*`; the component sizes its icons. Tabler projects add
   // `['error', { iconPrefixes: ['Icon'] }]`.
   'rm3-shadcn/no-icon-size-classes': shadcnCustomRules['rm3-shadcn/no-icon-size-classes'],
-  // SKILL.md 10: `z-50` on `DialogContent`, `PopoverContent` and the other
+  // styling.md: `z-50` on `DialogContent`, `PopoverContent` and the other
   // overlay surfaces; the primitives stack themselves.
   'rm3-shadcn/no-overlay-z-index': shadcnCustomRules['rm3-shadcn/no-overlay-z-index'],
-  // SKILL.md 4: `bg-blue-500`, `text-gray-600`, `text-white`; semantic tokens
+  // styling.md: `bg-blue-500`, `text-gray-600`, `text-white`; semantic tokens
   // only. Widen with `['error', { allow: ['white'] }]`.
   'rm3-shadcn/no-palette-colors': shadcnCustomRules['rm3-shadcn/no-palette-colors'],
-  // SKILL.md 9: `Input` / `Textarea` inside `InputGroup`.
+  // forms.md: a `relative` wrapper with an `absolute` button or icon over an
+  // `Input`; `InputGroup` + `InputGroupAddon`.
+  'rm3-shadcn/no-positioned-input-addon': shadcnCustomRules['rm3-shadcn/no-positioned-input-addon'],
+  // forms.md: `Input` / `Textarea` inside `InputGroup`.
   'rm3-shadcn/no-raw-input-in-input-group':
     shadcnCustomRules['rm3-shadcn/no-raw-input-in-input-group'],
-  // SKILL.md 1: `space-y-4`; `flex flex-col gap-4`.
+  // styling.md: `space-y-4`; `flex flex-col gap-4`.
   'rm3-shadcn/no-space-utilities': shadcnCustomRules['rm3-shadcn/no-space-utilities'],
-  // SKILL.md 7: `SelectItem` directly in `SelectContent`, `TabsTrigger`
+  // composition.md: `SelectItem` directly in `SelectContent`, `TabsTrigger`
   // directly in `Tabs`; items live in their Group.
   'rm3-shadcn/no-ungrouped-items': shadcnCustomRules['rm3-shadcn/no-ungrouped-items'],
-  // SKILL.md 2: `w-10 h-10` in one string; `size-10`.
+  // base-vs-radix.md: a `div` / `span` between a trigger and its one child.
+  'rm3-shadcn/no-wrapped-trigger': shadcnCustomRules['rm3-shadcn/no-wrapped-trigger'],
+  // chat.md: `Separator` + label + `Separator`; `Marker`.
+  'rm3-shadcn/prefer-marker': shadcnCustomRules['rm3-shadcn/prefer-marker'],
+  // composition.md: `<hr>` or an empty `border-t` div; `Separator`.
+  'rm3-shadcn/prefer-separator': shadcnCustomRules['rm3-shadcn/prefer-separator'],
+  // styling.md: `w-10 h-10` in one string; `size-10`.
   'rm3-shadcn/prefer-size-utility': shadcnCustomRules['rm3-shadcn/prefer-size-utility'],
-  // SKILL.md 3: `overflow-hidden text-ellipsis whitespace-nowrap`; `truncate`.
+  // composition.md: `animate-pulse` on a `div`; `Skeleton`.
+  'rm3-shadcn/prefer-skeleton': shadcnCustomRules['rm3-shadcn/prefer-skeleton'],
+  // styling.md: `overflow-hidden text-ellipsis whitespace-nowrap`; `truncate`.
   'rm3-shadcn/prefer-truncate': shadcnCustomRules['rm3-shadcn/prefer-truncate'],
-  // SKILL.md 11: an icon beside text in `Button` carries `data-icon`.
+  // forms.md: `data-invalid` on `Field` pairs with `aria-invalid` on the
+  // control, `data-disabled` with `disabled`.
+  'rm3-shadcn/require-field-state-pairing':
+    shadcnCustomRules['rm3-shadcn/require-field-state-pairing'],
+  // icons.md: an icon beside text in `Button` carries `data-icon`.
   'rm3-shadcn/require-icon-data-icon': shadcnCustomRules['rm3-shadcn/require-icon-data-icon'],
-  // SKILL.md 8: `DialogContent` / `SheetContent` / `DrawerContent` /
+  // base-vs-radix.md: `render={<a />}` on a button primitive needs
+  // `nativeButton={false}`.
+  'rm3-shadcn/require-native-button-false':
+    shadcnCustomRules['rm3-shadcn/require-native-button-false'],
+  // composition.md: `DialogContent` / `SheetContent` / `DrawerContent` /
   // `AlertDialogContent` need a Title; `Avatar` needs `AvatarFallback`.
   'rm3-shadcn/require-parts': shadcnCustomRules['rm3-shadcn/require-parts'],
 } satisfies NonNullable<OxlintConfig['rules']>;
@@ -724,17 +750,26 @@ export const shadcnRulesOff = {
   // selectors, `z-50` on their own overlays, and compose their own parts.
   // Every rm3-shadcn rule describes app code composing the primitives, not
   // the primitives themselves.
+  'rm3-shadcn/no-base-api-mismatch': 'off',
+  'rm3-shadcn/no-button-loading-prop': 'off',
   'rm3-shadcn/no-conditional-class-template': 'off',
   'rm3-shadcn/no-dark-color-overrides': 'off',
   'rm3-shadcn/no-icon-size-classes': 'off',
   'rm3-shadcn/no-overlay-z-index': 'off',
   'rm3-shadcn/no-palette-colors': 'off',
+  'rm3-shadcn/no-positioned-input-addon': 'off',
   'rm3-shadcn/no-raw-input-in-input-group': 'off',
   'rm3-shadcn/no-space-utilities': 'off',
   'rm3-shadcn/no-ungrouped-items': 'off',
+  'rm3-shadcn/no-wrapped-trigger': 'off',
+  'rm3-shadcn/prefer-marker': 'off',
+  'rm3-shadcn/prefer-separator': 'off',
   'rm3-shadcn/prefer-size-utility': 'off',
+  'rm3-shadcn/prefer-skeleton': 'off',
   'rm3-shadcn/prefer-truncate': 'off',
+  'rm3-shadcn/require-field-state-pairing': 'off',
   'rm3-shadcn/require-icon-data-icon': 'off',
+  'rm3-shadcn/require-native-button-false': 'off',
   'rm3-shadcn/require-parts': 'off',
 } satisfies NonNullable<OxlintConfig['rules']>;
 
@@ -1003,9 +1038,9 @@ export const rm3Config: OxlintConfig = {
 
     // --- Node (on for every file; the rules match Node APIs and imports) ---
     ...nodeRules,
-    // --- Tailwind (skills/rm3-tailwind) ---
+    // --- Tailwind ---
     ...tailwindRulesOn,
-    // --- shadcn (skills/rm3-shadcn) ---
+    // --- shadcn (from the global shadcn skill's rules) ---
     ...shadcnRulesOn,
     // --- Fastify (fastify-best-practices skill) ---
     ...fastifyRulesOn,

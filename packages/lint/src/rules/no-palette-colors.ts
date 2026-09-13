@@ -29,7 +29,7 @@ export function hasDarkVariant(token: string): boolean {
 /**
  * Report a raw Tailwind palette color (`bg-blue-500`, `text-gray-600`,
  * `border-white`); the theme's semantic tokens carry light and dark values
- * (skills/rm3-shadcn, rule 4). A token under `dark:` is left to
+ * (shadcn skill, rules/styling.md). A token under `dark:` is left to
  * `no-dark-color-overrides`, so each token reports once.
  */
 export const noPaletteColorsRule = defineRule({

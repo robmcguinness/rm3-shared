@@ -34,7 +34,7 @@ function isHost(name: string): boolean {
 
 /**
  * Report a size class on an icon inside a component that sizes its icons
- * (skills/rm3-shadcn, rule 12). An icon carrying `data-icon` is checked
+ * (shadcn skill, rules/icons.md). An icon carrying `data-icon` is checked
  * wherever it sits; any other icon only inside a known host.
  */
 export const noIconSizeClassesRule = defineRule({

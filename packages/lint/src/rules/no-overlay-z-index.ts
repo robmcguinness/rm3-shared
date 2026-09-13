@@ -28,7 +28,7 @@ const OVERLAYS: ReadonlySet<string> = new Set([
 /**
  * Report a `z-*` class on an overlay component; the primitives stack
  * themselves, and a manual value fights the next overlay that opens
- * (skills/rm3-shadcn, rule 10).
+ * (shadcn skill, rules/styling.md).
  */
 export const noOverlayZIndexRule = defineRule({
   createOnce(context) {

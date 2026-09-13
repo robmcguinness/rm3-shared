@@ -38,7 +38,7 @@ function longhandVariants(group: readonly ClassToken[]): string[] {
 
 /**
  * Report `overflow-hidden text-ellipsis whitespace-nowrap` spelled out;
- * `truncate` is the same three declarations (skills/rm3-shadcn, rule 3).
+ * `truncate` is the same three declarations (shadcn skill, rules/styling.md).
  */
 export const preferTruncateRule = defineRule({
   createOnce(context) {

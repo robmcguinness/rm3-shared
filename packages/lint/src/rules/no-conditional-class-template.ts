@@ -26,7 +26,7 @@ function isConditional(expression: ESTree.Expression): boolean {
 /**
  * Report a ternary or `&&` interpolated into a `className` template or `+`
  * chain; `cn()` takes the condition as an argument and merges the result
- * (skills/rm3-shadcn, rule 6).
+ * (shadcn skill, rules/styling.md).
  */
 export const noConditionalClassTemplateRule = defineRule({
   createOnce(context) {
