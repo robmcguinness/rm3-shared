@@ -589,18 +589,19 @@ export const nodeTestRulesOff = {
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
- * The two `rm3-tailwind` plugin rules, each a practice from
- * `skills/rm3-tailwind` a linter can check from class strings alone. On for
- * every file: they match `className` and `cn`/`cva` calls, so a Node file
- * pays nothing. Neither rule has an oxlint counterpart.
+ * The two `rm3-tailwind` plugin rules, the Tailwind practices a linter can
+ * check from class strings alone (`skills/rm3-tailwind` defers them here under
+ * "Enforced by lint"). On for every file: they match `className` and
+ * `cn`/`cva` calls, so a Node file pays nothing. Neither rule has an oxlint
+ * counterpart.
  */
 export const tailwindRulesOn = {
-  // SKILL.md 3: no arbitrary values (`bg-[#fff]`, `p-[13px]`) outside the
-  // height and width utilities; tokens live in `@theme`. Widen the allowlist
-  // in a consumer override with `['error', { allow: ['grid-cols-'] }]`.
+  // No arbitrary values (`bg-[#fff]`, `p-[13px]`) outside the height and
+  // width utilities; tokens live in `@theme`. Widen the allowlist in a
+  // consumer override with `['error', { allow: ['grid-cols-'] }]`.
   'rm3-tailwind/no-arbitrary-values': tailwindCustomRules['rm3-tailwind/no-arbitrary-values'],
-  // SKILL.md 7: `bg-${color}-600` is never emitted; Tailwind only generates
-  // classes it finds whole in source.
+  // `bg-${color}-600` is never emitted; Tailwind only generates classes it
+  // finds whole in source.
   'rm3-tailwind/no-dynamic-class-names': tailwindCustomRules['rm3-tailwind/no-dynamic-class-names'],
 } satisfies NonNullable<OxlintConfig['rules']>;
 

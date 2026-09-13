@@ -142,7 +142,7 @@ rules: {
 
 ## Tailwind rules
 
-`tailwindRulesOn` turns the two checkable practices in `skills/rm3-tailwind` into ratchets, both
+`tailwindRulesOn` turns the two practices `skills/rm3-tailwind` defers to the linter into ratchets, both
 from the `rm3-tailwind` plugin in `@rm3/lint` (see `packages/lint/README.md`):
 
 - `rm3-tailwind/no-arbitrary-values`: no `bg-[#fff]` / `p-[13px]` outside `h-`, `w-`, `min-h-`,

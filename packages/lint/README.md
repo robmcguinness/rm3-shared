@@ -61,8 +61,9 @@ call. A `??` / `||` between any of those logger shapes is also matched. `console
 `.child()` result are not matched.
 
 `src/tailwind.ts` (the `@rm3/lint/tailwind` export) is a third plugin, `rm3-tailwind`, for the two
-practices in `skills/rm3-tailwind` a linter can check from class strings alone. Also kept apart from
-`anti-slop`; `shadcnRulesOff` in `@rm3/oxlint-config` turns both off by name over vendored primitives.
+Tailwind practices a linter can check from class strings alone; `skills/rm3-tailwind` defers them
+here under "Enforced by lint". Also kept apart from `anti-slop`; `shadcnRulesOff` in
+`@rm3/oxlint-config` turns both off by name over vendored primitives.
 
 - `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-tailwind` jsPlugin
   by `@rm3/oxlint-config`.

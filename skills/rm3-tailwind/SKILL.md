@@ -31,33 +31,17 @@ This gives you utilities like `bg-brand-500`, `font-display`, `shadow-soft`, and
 
 Reach for utility classes before writing custom CSS. Long class lists in markup are normal and usually easier to scan than bouncing between HTML and a separate stylesheet. Teams often reach for custom CSS the moment a class attribute feels "too long" — resist that impulse.
 
-### 3. No arbitrary Tailwind values (except height/width)
-
-**Never use arbitrary values** (e.g., `[#hex]`, `[13px]`) for colors, spacing, font sizes, border radius, margins, padding, or gaps. These bypass the design system, prevent global style updates, and create visual inconsistency. Always use design tokens defined in `@theme`.
-
-The **only exception** is height and width properties (`h-`, `w-`, `min-h-`, `max-h-`, `min-w-`, `max-w-`) where precise sizing is required.
-
-```jsx
-// DON'T: bg-[#1a1a1a] text-[#fff] p-[13px] rounded-[5px] border-[#333]
-// DO:    bg-surface4 text-neutral6 p-3 rounded-md border-neutral3
-
-// EXCEPTION: Arbitrary h/w allowed
-// OK:    h-[200px] w-[350px] min-h-[300px] max-w-[800px]
-```
-
-See [references/no-arbitrary-values.md](references/no-arbitrary-values.md) for full examples and the complete list of allowed patterns.
-
-### 4. Extract components, not `@apply` classes
+### 3. Extract components, not `@apply` classes
 
 When duplication appears, extract a reusable component (template partial, React component, Blade component, etc.) rather than hiding utilities behind `@apply`. The component approach preserves the utility-first model and keeps styling visible at the usage site.
 
 `@apply` has its place — bridging Tailwind with CSS you can't express in markup, or styling third-party markup you don't control — but it's a poor default for everyday component styling.
 
-### 5. Keep class lists readable with tooling
+### 4. Keep class lists readable with tooling
 
 Use [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for autocomplete and linting, and Tailwind's Prettier plugin for automatic class sorting. This gives predictable class order, cleaner diffs, and fewer debates about formatting.
 
-### 6. Use variants for states, themes, and responsive behavior
+### 5. Use variants for states, themes, and responsive behavior
 
 Lean on built-in variants instead of writing custom CSS:
 
@@ -66,26 +50,7 @@ Lean on built-in variants instead of writing custom CSS:
 - `dark:` for theme differences
 - `data-*` and `aria-*` variants when component state lives in attributes
 
-### 7. Keep class names statically detectable
-
-Tailwind only generates classes it finds in source files. Never build class names dynamically with string interpolation.
-
-**Bad:**
-```jsx
-<button className={`bg-${color}-600 hover:bg-${color}-500`}>...</button>
-```
-
-**Good:**
-```jsx
-const variants = {
-    success: "bg-emerald-600 hover:bg-emerald-500",
-    danger: "bg-rose-600 hover:bg-rose-500",
-    info: "bg-sky-600 hover:bg-sky-500",
-};
-<button className={variants[variant] ?? variants.info}>...</button>
-```
-
-### 8. Write custom CSS only when utilities aren't the right tool
+### 6. Write custom CSS only when utilities aren't the right tool
 
 Good reasons to step outside utilities:
 
@@ -100,8 +65,16 @@ Good reasons to step outside utilities:
 }
 ```
 
-### 9. Understand Preflight before disabling it
+### 7. Understand Preflight before disabling it
 
 Preflight is Tailwind's base reset layer. If buttons, headings, lists, or borders look different after installing Tailwind, Preflight is usually why. The best move is usually to understand what changed and override the specific area you care about — turning it off globally should be a deliberate compatibility decision.
 
+## Enforced by lint
 
+Two practices are not written out here because the `rm3-tailwind` oxlint plugin
+(`packages/lint/src/tailwind.ts`) rejects them:
+
+- `rm3-tailwind/no-arbitrary-values`: no `bg-[#fff]` / `p-[13px]`; arbitrary values pass only on
+  `h-`, `w-`, `min-h-`, `max-h-`, `min-w-`, `max-w-`.
+- `rm3-tailwind/no-dynamic-class-names`: no `bg-${color}-600` or `'text-' + size`; write each
+  complete class as a literal and select between them.

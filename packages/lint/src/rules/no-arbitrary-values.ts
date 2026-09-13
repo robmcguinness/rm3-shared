@@ -58,7 +58,7 @@ function readOptions(option?: unknown): Options {
 /**
  * Report Tailwind arbitrary values (`bg-[#1a1a1a]`, `p-[13px]`) outside the
  * allowed utility prefixes. Design tokens live in `@theme`
- * (skills/rm3-tailwind, rule 3).
+ * (skills/rm3-tailwind, "Enforced by lint").
  */
 export const noArbitraryValuesRule = defineRule({
   createOnce(context) {

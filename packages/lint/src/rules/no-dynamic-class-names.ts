@@ -67,7 +67,7 @@ function isGlued(left: ESTree.Expression, right: ESTree.Expression): boolean {
 
 /**
  * Report class names assembled at runtime; Tailwind only emits classes it
- * finds whole in source (skills/rm3-tailwind, rule 7).
+ * finds whole in source (skills/rm3-tailwind, "Enforced by lint").
  */
 export const noDynamicClassNamesRule = defineRule({
   createOnce(context) {
