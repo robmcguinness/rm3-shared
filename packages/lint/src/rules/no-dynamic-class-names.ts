@@ -1,10 +1,11 @@
 import { defineRule } from '@oxlint/plugins';
 
 import {
+  concatOperands,
+  createCalleeMatcher,
   createClassValueVisitor,
   DEFAULT_CALLEES,
   quasiText,
-  readStringArrayOption,
 } from '#shared/class-strings.ts';
 
 import type { ESTree } from '@oxlint/plugins';
@@ -27,14 +28,6 @@ function gluedExpressions(template: ESTree.TemplateLiteral): ESTree.Expression[]
     const rightOk = (index === last && right === '') || STARTS_WITH_SPACE.test(right);
     return !leftOk || !rightOk;
   });
-}
-
-/** The operands of a left-associative `+` chain, in source order. */
-function concatOperands(node: ESTree.Expression): ESTree.Expression[] {
-  if (node.type === 'BinaryExpression' && node.operator === '+') {
-    return [...concatOperands(node.left), ...concatOperands(node.right)];
-  }
-  return [node];
 }
 
 /** The static text at the end of an operand, or null when it is not a string. */
@@ -78,16 +71,7 @@ function isGlued(left: ESTree.Expression, right: ESTree.Expression): boolean {
  */
 export const noDynamicClassNamesRule = defineRule({
   createOnce(context) {
-    let cachedFor: unknown = Symbol('unset');
-    let callees: ReadonlySet<string> = new Set(DEFAULT_CALLEES);
-    const isCallee = (name: string): boolean => {
-      const option = context.options[0];
-      if (option !== cachedFor) {
-        cachedFor = option;
-        callees = new Set(readStringArrayOption(option, 'callees', DEFAULT_CALLEES));
-      }
-      return callees.has(name);
-    };
+    const isCallee = createCalleeMatcher(() => context.options[0]);
 
     const report = (node: ESTree.Node): void => {
       context.report({

@@ -7,6 +7,7 @@ import type { Capability, RuleFramework } from 'oxlint-plugin-react-doctor/core'
 import { antiSlopRules, antiSlopRulesOff, complexityRules } from '@rm3/lint';
 import { fastifyCustomRules } from '@rm3/lint/fastify';
 import { nodeCustomRules } from '@rm3/lint/node';
+import { shadcnCustomRules } from '@rm3/lint/shadcn';
 import { tailwindCustomRules } from '@rm3/lint/tailwind';
 // The `core` entry is rule metadata only (31 ms to import); the root entry is
 // the plugin itself, which oxlint loads through `reactDoctorJsPlugin` below.
@@ -18,6 +19,7 @@ export {
   complexityRules,
   fastifyCustomRules,
   nodeCustomRules,
+  shadcnCustomRules,
   tailwindCustomRules,
 };
 
@@ -367,6 +369,16 @@ export const rm3TailwindJsPlugin = {
 } satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
 
 /**
+ * The `rm3-shadcn` plugin from `@rm3/lint`, resolved HERE for the same
+ * reason as `rm3NodeJsPlugin`. Already in `rm3Config.jsPlugins`; exported for
+ * the test and for consumer overrides.
+ */
+export const rm3ShadcnJsPlugin = {
+  name: 'rm3-shadcn',
+  specifier: import.meta.resolve('@rm3/lint/shadcn'),
+} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
+
+/**
  * The `rm3-fastify` plugin from `@rm3/lint`, resolved HERE for the same
  * reason as `rm3NodeJsPlugin`. Already in `rm3Config.jsPlugins`; exported for
  * the test and for consumer overrides.
@@ -593,6 +605,49 @@ export const tailwindRulesOn = {
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
+ * The twelve `rm3-shadcn` plugin rules, each a numbered practice from
+ * `skills/rm3-shadcn` a linter can check from JSX and class strings. On for
+ * every file: they match `className`, the class helpers and shadcn component
+ * names, so a Node file pays nothing. None has an oxlint counterpart.
+ */
+export const shadcnRulesOn = {
+  // SKILL.md 6: `${a ? b : c}` in a className template; `cn()` takes the condition.
+  'rm3-shadcn/no-conditional-class-template':
+    shadcnCustomRules['rm3-shadcn/no-conditional-class-template'],
+  // SKILL.md 5: `dark:bg-gray-950` picks a color the semantic token already
+  // decides. Palette values only; `['error', { strict: true }]` also reports
+  // a `dark:` on a semantic token.
+  'rm3-shadcn/no-dark-color-overrides': shadcnCustomRules['rm3-shadcn/no-dark-color-overrides'],
+  // SKILL.md 12: `size-4` on an icon inside `Button`, `DropdownMenuItem`,
+  // `Alert`, `Sidebar*`; the component sizes its icons. Tabler projects add
+  // `['error', { iconPrefixes: ['Icon'] }]`.
+  'rm3-shadcn/no-icon-size-classes': shadcnCustomRules['rm3-shadcn/no-icon-size-classes'],
+  // SKILL.md 10: `z-50` on `DialogContent`, `PopoverContent` and the other
+  // overlay surfaces; the primitives stack themselves.
+  'rm3-shadcn/no-overlay-z-index': shadcnCustomRules['rm3-shadcn/no-overlay-z-index'],
+  // SKILL.md 4: `bg-blue-500`, `text-gray-600`, `text-white`; semantic tokens
+  // only. Widen with `['error', { allow: ['white'] }]`.
+  'rm3-shadcn/no-palette-colors': shadcnCustomRules['rm3-shadcn/no-palette-colors'],
+  // SKILL.md 9: `Input` / `Textarea` inside `InputGroup`.
+  'rm3-shadcn/no-raw-input-in-input-group':
+    shadcnCustomRules['rm3-shadcn/no-raw-input-in-input-group'],
+  // SKILL.md 1: `space-y-4`; `flex flex-col gap-4`.
+  'rm3-shadcn/no-space-utilities': shadcnCustomRules['rm3-shadcn/no-space-utilities'],
+  // SKILL.md 7: `SelectItem` directly in `SelectContent`, `TabsTrigger`
+  // directly in `Tabs`; items live in their Group.
+  'rm3-shadcn/no-ungrouped-items': shadcnCustomRules['rm3-shadcn/no-ungrouped-items'],
+  // SKILL.md 2: `w-10 h-10` in one string; `size-10`.
+  'rm3-shadcn/prefer-size-utility': shadcnCustomRules['rm3-shadcn/prefer-size-utility'],
+  // SKILL.md 3: `overflow-hidden text-ellipsis whitespace-nowrap`; `truncate`.
+  'rm3-shadcn/prefer-truncate': shadcnCustomRules['rm3-shadcn/prefer-truncate'],
+  // SKILL.md 11: an icon beside text in `Button` carries `data-icon`.
+  'rm3-shadcn/require-icon-data-icon': shadcnCustomRules['rm3-shadcn/require-icon-data-icon'],
+  // SKILL.md 8: `DialogContent` / `SheetContent` / `DrawerContent` /
+  // `AlertDialogContent` need a Title; `Avatar` needs `AvatarFallback`.
+  'rm3-shadcn/require-parts': shadcnCustomRules['rm3-shadcn/require-parts'],
+} satisfies NonNullable<OxlintConfig['rules']>;
+
+/**
  * The five `rm3-fastify` plugin rules, each a practice from the
  * `fastify-best-practices` or `logging-best-practices` skill a linter can
  * decide from the call shape. On for every file: they key on `addHook`,
@@ -664,6 +719,22 @@ export const shadcnRulesOff = {
   // `[&_svg]:size-[...]`, and a few build class names from props.
   'rm3-tailwind/no-arbitrary-values': 'off',
   'rm3-tailwind/no-dynamic-class-names': 'off',
+  // Upstream primitives use `dark:` palette variants, `space-*`, sized `svg`
+  // selectors, `z-50` on their own overlays, and compose their own parts.
+  // Every rm3-shadcn rule describes app code composing the primitives, not
+  // the primitives themselves.
+  'rm3-shadcn/no-conditional-class-template': 'off',
+  'rm3-shadcn/no-dark-color-overrides': 'off',
+  'rm3-shadcn/no-icon-size-classes': 'off',
+  'rm3-shadcn/no-overlay-z-index': 'off',
+  'rm3-shadcn/no-palette-colors': 'off',
+  'rm3-shadcn/no-raw-input-in-input-group': 'off',
+  'rm3-shadcn/no-space-utilities': 'off',
+  'rm3-shadcn/no-ungrouped-items': 'off',
+  'rm3-shadcn/prefer-size-utility': 'off',
+  'rm3-shadcn/prefer-truncate': 'off',
+  'rm3-shadcn/require-icon-data-icon': 'off',
+  'rm3-shadcn/require-parts': 'off',
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 export const rm3Config: OxlintConfig = {
@@ -705,6 +776,7 @@ export const rm3Config: OxlintConfig = {
     },
     rm3NodeJsPlugin,
     rm3TailwindJsPlugin,
+    rm3ShadcnJsPlugin,
     rm3FastifyJsPlugin,
     reactDoctorJsPlugin,
   ],
@@ -932,6 +1004,8 @@ export const rm3Config: OxlintConfig = {
     ...nodeRules,
     // --- Tailwind (skills/rm3-tailwind) ---
     ...tailwindRulesOn,
+    // --- shadcn (skills/rm3-shadcn) ---
+    ...shadcnRulesOn,
     // --- Fastify (fastify-best-practices skill) ---
     ...fastifyRulesOn,
   },

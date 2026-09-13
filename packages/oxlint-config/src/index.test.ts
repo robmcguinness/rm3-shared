@@ -16,6 +16,7 @@ import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 
 import rm3FastifyPlugin from '@rm3/lint/fastify';
 import rm3NodePlugin from '@rm3/lint/node';
+import rm3ShadcnPlugin from '@rm3/lint/shadcn';
 import rm3TailwindPlugin from '@rm3/lint/tailwind';
 
 import {
@@ -35,8 +36,10 @@ import {
   rm3Config,
   rm3FastifyJsPlugin,
   rm3NodeJsPlugin,
+  rm3ShadcnJsPlugin,
   rm3TailwindJsPlugin,
   shadcnRulesOff,
+  shadcnRulesOn,
   tailwindRulesOn,
 } from './index.ts';
 
@@ -419,6 +422,45 @@ describe('tailwindRules', () => {
     const off = new Map(Object.entries(shadcnRulesOff));
     for (const id of Object.keys(rm3TailwindPlugin.rules)) {
       assert.equal(off.get(`${RM3_TAILWIND_PREFIX}${id}`), 'off', `rm3-tailwind/${id} is on`);
+    }
+  });
+});
+
+describe('shadcnRules', () => {
+  const RM3_SHADCN_PREFIX = 'rm3-shadcn/';
+
+  test('names only rules the rm3-shadcn plugin registers', () => {
+    for (const key of Object.keys(shadcnRulesOn)) {
+      assert.ok(key.startsWith(RM3_SHADCN_PREFIX), `${key} is not an rm3-shadcn rule`);
+      assert.ok(
+        key.slice(RM3_SHADCN_PREFIX.length) in rm3ShadcnPlugin.rules,
+        `${key} is not an rm3-shadcn plugin rule`,
+      );
+    }
+  });
+
+  test('names every rm3-shadcn plugin rule', () => {
+    for (const id of Object.keys(rm3ShadcnPlugin.rules)) {
+      assert.ok(`${RM3_SHADCN_PREFIX}${id}` in shadcnRulesOn, `rm3-shadcn/${id} is not enabled`);
+    }
+    assert.equal(rm3ShadcnJsPlugin.name, rm3ShadcnPlugin.meta?.name);
+    assert.ok(rm3ShadcnJsPlugin.specifier.startsWith('file://'));
+    assert.ok(rm3Config.jsPlugins?.includes(rm3ShadcnJsPlugin), 'rm3-shadcn is not in jsPlugins');
+  });
+
+  test('includes the shadcn rules without shadowing decisions', () => {
+    for (const [key, setting] of Object.entries(shadcnRulesOn)) {
+      assert.deepEqual(rm3Config.rules?.[key], setting, `${key} missing`);
+    }
+  });
+
+  test('turns every rm3-shadcn rule off over vendored shadcn primitives', () => {
+    // The rules describe app code composing the primitives; the primitives
+    // themselves use `dark:` palette variants and `z-50`, and `shadcn add`
+    // overwrites edits.
+    const off = new Map(Object.entries(shadcnRulesOff));
+    for (const id of Object.keys(rm3ShadcnPlugin.rules)) {
+      assert.equal(off.get(`${RM3_SHADCN_PREFIX}${id}`), 'off', `rm3-shadcn/${id} is on`);
     }
   });
 });

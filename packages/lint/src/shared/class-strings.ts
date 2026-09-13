@@ -37,6 +37,15 @@ export function readStringArrayOption(
   return value.filter((entry): entry is string => typeof entry === 'string');
 }
 
+/** The boolean option `key`, or `fallback` when the option is absent or malformed. */
+export function readBooleanOption(option: unknown, key: string, fallback: boolean): boolean {
+  if (!isRecord(option)) {
+    return fallback;
+  }
+  const value = option[key];
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 /** The name of `cn(...)` or `styles.cn(...)`, or null for a computed callee. */
 export function calleeName(callee: ESTree.Expression): string | null {
   return callee.type === 'Identifier' ? callee.name : memberPropertyName(callee);
@@ -137,6 +146,55 @@ export function walkClassExpression(
   }
 }
 
+/**
+ * A `callees` option reader for `createOnce`, which runs once per process:
+ * the set is rebuilt only when `context.options[0]` changes identity.
+ */
+export function createCalleeMatcher(readOption: () => unknown): (name: string) => boolean {
+  let cachedFor: unknown = Symbol('unset');
+  let callees: ReadonlySet<string> = new Set(DEFAULT_CALLEES);
+  return (name) => {
+    const option = readOption();
+    if (option !== cachedFor) {
+      cachedFor = option;
+      callees = new Set(readStringArrayOption(option, 'callees', DEFAULT_CALLEES));
+    }
+    return callees.has(name);
+  };
+}
+
+export interface ClassToken {
+  /** The node to report on: the string literal or the template chunk holding the token. */
+  node: ESTree.Node;
+  token: string;
+}
+
+/**
+ * The static class tokens of a class value, grouped by string: one group for
+ * a literal, one per static chunk of a template. A `+` chain yields nothing
+ * here; its operands are visited on their own.
+ */
+export function staticTokenGroups(value: ClassValue): ClassToken[][] {
+  if (value.kind === 'literal') {
+    const { node } = value;
+    return [splitClassTokens(node.value).map((token) => ({ node, token }))];
+  }
+  if (value.kind === 'template') {
+    return value.node.quasis.map((quasi) =>
+      splitClassTokens(quasiText(quasi)).map((token) => ({ node: quasi, token })),
+    );
+  }
+  return [];
+}
+
+/** The operands of a left-associative `+` chain, in source order. */
+export function concatOperands(node: ESTree.Expression): ESTree.Expression[] {
+  if (node.type === 'BinaryExpression' && node.operator === '+') {
+    return [...concatOperands(node.left), ...concatOperands(node.right)];
+  }
+  return [node];
+}
+
 /** Visit the value of a `className` or `class` JSX attribute. */
 export function visitClassAttribute(node: ESTree.JSXAttribute, visit: ClassValueVisitor): void {
   if (!isClassAttribute(node) || node.value === null) {
@@ -212,6 +270,14 @@ function lastTopLevelIndex(text: string, char: string): number {
     }
   }
   return index;
+}
+
+/**
+ * The variant chain of a class token, colon included: `md:hover:` for
+ * `md:hover:w-4`, `` for a bare `w-4`. Same split as `utilityOf`.
+ */
+export function variantPrefixOf(token: string): string {
+  return token.slice(0, lastTopLevelIndex(token, ':') + 1);
 }
 
 /**

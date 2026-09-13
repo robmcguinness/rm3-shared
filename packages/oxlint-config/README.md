@@ -39,6 +39,9 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
 | `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
 | `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
+| `shadcnRulesOn`                   | already in `rm3Config`; the twelve `rm3-shadcn` plugin rules                                                                                                  |
+| `rm3ShadcnJsPlugin`               | already in `rm3Config`; the `rm3-shadcn` jsPlugin entry, exported for overrides that set their own `plugins`                                                  |
+| `shadcnCustomRules`               | the twelve `rm3-shadcn` plugin rules at `error`, re-exported from `@rm3/lint/shadcn`                                                                          |
 | `fastifyRulesOn`                  | already in `rm3Config`; the five `rm3-fastify` plugin rules                                                                                                   |
 | `rm3FastifyJsPlugin`              | already in `rm3Config`; the `rm3-fastify` jsPlugin entry, exported for overrides that set their own `plugins`                                                 |
 | `fastifyCustomRules`              | the five `rm3-fastify` plugin rules at `error`, re-exported from `@rm3/lint/fastify`                                                                          |
@@ -166,6 +169,59 @@ rules: {
 
 The skill's other practices are not lint rules: `@apply` lives in CSS, which oxlint does not
 read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
+
+## shadcn rules
+
+`shadcnRulesOn` turns the twelve numbered practices in `skills/rm3-shadcn` into ratchets, all
+from the `rm3-shadcn` plugin in `@rm3/lint` (see `packages/lint/README.md` for what each one
+matches). They are shadcn's opinions about app code that composes the primitives, kept apart
+from `rm3-tailwind` because the two skills disagree on `dark:` (Tailwind's endorses the variant;
+shadcn routes theme differences through semantic tokens).
+
+Class-string rules, matching `className` / `class` and the class helpers like the Tailwind rules:
+
+- `rm3-shadcn/no-space-utilities`: no `space-x-*` / `space-y-*`; `flex gap-*`.
+- `rm3-shadcn/prefer-size-utility`: `w-10 h-10` in one string is `size-10`.
+- `rm3-shadcn/prefer-truncate`: `overflow-hidden text-ellipsis whitespace-nowrap` is `truncate`.
+- `rm3-shadcn/no-palette-colors`: no `bg-blue-500`, `text-gray-600`, `text-white`; semantic
+  tokens (`bg-primary`, `text-muted-foreground`) or a `@theme` color. `['error', { allow:
+['white'] }]` permits a value.
+- `rm3-shadcn/no-dark-color-overrides`: no `dark:bg-gray-950`; the semantic token already
+  carries a dark value. `dark:bg-success/20` (a token tweak) passes unless `strict: true`.
+- `rm3-shadcn/no-conditional-class-template`: no `${open ? "a" : "b"}` inside a `className`
+  template; pass the condition to `cn()`.
+
+Composition rules, matching shadcn component names in JSX:
+
+- `rm3-shadcn/no-ungrouped-items`: `SelectItem` in `SelectContent`, `DropdownMenuItem` in
+  `DropdownMenuContent`, `CommandItem` in `CommandList`, `TabsTrigger` in `Tabs`, and the rest of
+  the table in `skills/rm3-shadcn`, each wrapped in its Group. Looks through `.map()`.
+- `rm3-shadcn/require-parts`: `DialogContent`, `SheetContent`, `DrawerContent` and
+  `AlertDialogContent` contain a Title; `Avatar` contains `AvatarFallback`. `{children}`, a
+  spread, or a family-named component the rule does not know (`EditProfileDialogBody`) counts as
+  content it cannot see and passes.
+- `rm3-shadcn/no-raw-input-in-input-group`: `Input` / `Textarea` inside `InputGroup` are
+  `InputGroupInput` / `InputGroupTextarea`.
+- `rm3-shadcn/no-overlay-z-index`: no `z-*` on `DialogContent`, `PopoverContent`,
+  `TooltipContent` and the other overlay surfaces. A plain `div` is not in scope.
+
+Icon rules, recognizing an icon by a `data-icon` attribute, a `*Icon` name, or `Spinner`:
+
+- `rm3-shadcn/require-icon-data-icon`: an icon beside text inside `Button` carries
+  `data-icon="inline-start"` or `"inline-end"`. An icon-only button passes.
+- `rm3-shadcn/no-icon-size-classes`: no `size-*` / `w-*` / `h-*` on an icon inside `Button`,
+  `DropdownMenuItem`, `Alert`, `Badge`, `Sidebar*` and the other hosts that size their icons.
+
+A Tabler project names icons `IconSearch`; set `['error', { iconPrefixes: ['Icon'] }]` on both
+icon rules.
+
+All twelve are on for every file and match only JSX and the class helpers, so a Node file pays
+nothing. `shadcnRulesOff` turns all twelve off: the primitives themselves use `dark:` palette
+variants, `z-50` on their own overlays, and compose their own parts.
+
+The rest of the shadcn skill is not lint rules: `Button` `isLoading` is already a type error
+under `typeCheck`; "use `Alert` / `Empty` / `Badge` instead of custom markup" is intent, not
+syntax; `toast` per base and `asChild` vs `render` depend on the consumer's `components.json`.
 
 ## Fastify rules
 
