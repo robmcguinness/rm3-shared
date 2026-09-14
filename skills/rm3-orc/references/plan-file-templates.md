@@ -31,6 +31,11 @@ Source plan: <absolute path>   <!-- only when the user handed over a plan file -
                                             and the user supplied the command; outranks the
                                             script value on resume -->
 
+## Deferred
+
+<!-- Items the interview or a review raised that this plan does not implement, one line each
+     with the reason, so a later run can pick them up from the record instead of the chat. -->
+
 ## Decisions log
 
 <!-- One line per committed unit: what the next coder must know (new helper, changed

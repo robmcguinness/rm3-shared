@@ -22,7 +22,9 @@
 #
 # Exit codes:
 #   0  sentinel with this tag found
-#   1  usage error or an unfilled {{SLOT}}
+#   1  usage error, an unfilled {{SLOT}}, or PLANS_DIR is not the codename
+#      folder (no <PLANS_DIR>/<CODENAME>-description.md; checked in every mode,
+#      so --dry-run catches it before a worker is prompted)
 #   3  herdr refused or lost the wait; the error code is on stdout
 #      (agent_blocked, agent_prompt_stalled, timeout, or another herdr code)
 #   4  the wait settled but no sentinel carries this tag
@@ -54,6 +56,18 @@ if [ "$MODE" != resume ]; then
   if MISSING=$(grep -o '{{[A-Z_]*}}' <<<"$TEXT" | head -1) && [ -n "$MISSING" ]; then
     echo "unfilled slot $MISSING in $TPL" >&2; exit 1
   fi
+fi
+# PLANS_DIR must be the codename folder: the templates append
+# <CODENAME>-description.md to it. A plan-root PLANS_DIR renders a prompt with
+# paths that do not exist and the worker blocks on them.
+if [ -n "$PLANS_DIR" ] && [ -n "$CODENAME" ]; then
+  for f in "$PLANS_DIR/$CODENAME-description.md" ${UNIT:+"$PLANS_DIR/$CODENAME-unit-$UNIT.md"}; do
+    if [ ! -f "$f" ]; then
+      echo "PLANS_DIR must be the codename folder: no $f" >&2
+      [ -f "$PLANS_DIR/$CODENAME/$CODENAME-description.md" ] && echo "did you mean PLANS_DIR=$PLANS_DIR/$CODENAME" >&2
+      exit 1
+    fi
+  done
 fi
 [ "$MODE" = dry ] && { printf '%s\n' "$TEXT"; exit 0; }
 

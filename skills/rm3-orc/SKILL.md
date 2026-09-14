@@ -23,7 +23,7 @@ Set `ORC` to this skill's directory: `${CLAUDE_PLUGIN_ROOT}/skills/rm3-orc` when
 | Script | Does |
 |---|---|
 | `find-siblings.sh [--no-probe]` | resolves the roles, probes the reviewer's hunk access, writes `~/.agents/plans/<repo>/.siblings.env` |
-| `turn.sh <agent> <tag> <template> KEY=VALUE…` | one worker turn: render, prompt, wait, print the sentinel plus `HEAD=`, `TREE=`, `CHECKLIST=` |
+| `turn.sh <agent> <tag> <template> KEY=VALUE…` | one worker turn: render, prompt, wait, print the sentinel plus `HEAD=`, `TREE=`, `CHECKLIST=`. Exits 1 before sending when `PLANS_DIR/CODENAME-description.md` does not exist |
 | `turn.sh --resume <agent> <tag> <template> KEY=VALUE…` | wait again on the same tag after a `timeout` or a lost sentinel; sends nothing |
 | `set-state.sh <unit-file> <state> [hash] [--review "<line>"]` | writes the unit's `State` (and `Base` on `implementing`), recounts, rewrites the table row, prints it |
 | `after-commit.sh <unit-file> "<commit sentinel>"` | verifies the commit, marks the unit committed, appends the handoff to the Decisions log, clears hunk notes, resets both workers |
@@ -42,7 +42,7 @@ herdr pane read --source recent-unwrapped --lines 120 <pane-id>   # the differ p
 
 1. Require `HERDR_ENV` and `herdr` on PATH. If either is missing, stop: the user must run `orc` inside herdr and invoke this skill in the `<base>-orch` pane.
 2. Run `$ORC/scripts/find-siblings.sh` and keep every line it prints: `CODER_NAME`, `CODER_PANE`, `CODER_KIND`, `CODER_RESET`, `REVIEWER_NAME`, `REVIEWER_PANE`, `REVIEWER_KIND`, `REVIEWER_RESET`, `REVIEWER_HUNK`, `HUNK_PANE`, `SESSION`, `REPO`. Exit 2 means a role is missing or ambiguous, or the reviewer cannot reach hunk over loopback: show its message and stop. Never guess between candidates and never build panes; tell the user to run `orc`.
-3. Plan root: `~/.agents/plans/<repo>/`, where `<repo>` is the basename of `REPO`. Never git-track plan files.
+3. Plan root: `~/.agents/plans/<repo>/`, where `<repo>` is the basename of `REPO`. Each plan lives in its own folder under it, `<plan root>/<codename>/`, and that folder, not the root, is the `PLANS_DIR` every worker prompt takes. Never git-track plan files.
 4. Scan the plan root for unfinished plans: any unit file whose `State` is not `committed <hash>`, or a description not marked completed. If one exists, ask the user: **resume** or **start new**. On resume, read [references/recovery.md](references/recovery.md) and follow its resume table.
 
 ## Phase 1 — Plan
@@ -53,13 +53,13 @@ herdr pane read --source recent-unwrapped --lines 120 <pane-id>   # the differ p
    - **Deep.** Load the **grilling** skill and run it to completion. Use this mode only when the user asks for it: any `grill` phrase (`grill me`, `grilling`, `grill this`), or a request for a deep discussion or a stress test of the plan. The request can come in the original prompt or as an answer during the lightweight round; in that case, switch to deep before writing plan files.
    Never pick deep on your own. Ambiguity you find in lightweight mode is a question in the round, not a reason to escalate.
 3. Pick a codename: a short kebab-case description of the goal.
-4. Write the plan files in `~/.agents/plans/<repo>/<codename>/` from [references/plan-file-templates.md](references/plan-file-templates.md): `<codename>-description.md` with the units table listing every unit file (seed `Checklist` as `0/<N>`, `Status` as `pending`), and one `<codename>-unit-NN.md` per unit. When the user handed you a plan file, put `Source plan:` in the description and `Source: <path>#<heading>` in each unit, and list only the deltas from that section under Proposed changes.
+4. Write the plan files in `~/.agents/plans/<repo>/<codename>/` from [references/plan-file-templates.md](references/plan-file-templates.md). This folder is `PLANS_DIR` for every `turn.sh` call; set it once here. The files: `<codename>-description.md` with the units table listing every unit file (seed `Checklist` as `0/<N>`, `Status` as `pending`), and one `<codename>-unit-NN.md` per unit. When the user handed you a plan file, put `Source plan:` in the description and `Source: <path>#<heading>` in each unit, and list only the deltas from that section under Proposed changes.
 5. Each unit is independently committable, has a task checklist, and has a `## Validation` section with the exact commands the coder runs: `pnpm check` first when the repo defines a `check` script (its format, lint, typecheck and test group), then any targeted commands for the paths the unit touches. Include unit and integration tests when warranted. Show proposed changes as markdown diffs with inline comments that explain **why**.
 6. Show the user the description and the units table. **Wait for approval** before executing.
 
 ## Phase 2 — Execute (per unit, in order)
 
-Every worker prompt is one **foreground** `turn.sh` call with the tool's 10 minute timeout (`timeout: 600000`). Tags are `<unit>-<phase>-<attempt>` (`u02-impl-1`, `u02-review-2`, `all-gate-1`); never reuse one. Workers have no memory between units: the description's **Decisions log** is their only handoff. Slots: `PLANS_DIR`, `CODENAME`, `UNIT` (`NN`), `SESSION` (never `--repo`), and for `review` also `REREVIEW` (empty, or `This is a re-review.`).
+Every worker prompt is one **foreground** `turn.sh` call with the tool's 10 minute timeout (`timeout: 600000`). Tags are `<unit>-<phase>-<attempt>` (`u02-impl-1`, `u02-review-2`, `all-gate-1`); never reuse one. Workers have no memory between units: the description's **Decisions log** is their only handoff. Slots: `PLANS_DIR` (the codename folder `~/.agents/plans/<repo>/<codename>`, never the plan root: the templates append `<codename>-description.md` to it), `CODENAME`, `UNIT` (`NN`), `SESSION` (never `--repo`), and for `review` also `REREVIEW` (empty, or `This is a re-review.`).
 
 | `turn.sh` result | Do |
 |---|---|

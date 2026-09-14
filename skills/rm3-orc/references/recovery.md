@@ -84,7 +84,11 @@ RM3-ORC[<tag>]: SUCCESS — <one-line summary> — tests: <passed>/<total>, lint
 RM3-ORC[<tag>]: FAIL — <one-line reason> — tests: <passed>/<total>, lint: <clean|N issues>
 RM3-ORC[<tag>]: NOTHING-TO-REVIEW
 RM3-ORC[<tag>]: REVIEW-BLOCKED — <the exact hunk error>
+RM3-ORC[<tag>]: SUCCESS — <handoff, or "no handoff"> — committed <short-hash>    (commit turns)
 ```
+
+The commit form ends with the hash so `turn.sh` knows where a wrapped line stops; a handoff
+placed after the hash would be truncated.
 
 `<tag>` is `<unit>-<phase>-<attempt>`: unit `uNN` (or `all`), phase one of `impl`, `review`,
 `fix`, `commit`, `gate`, attempt from 1. One tag per prompt, never reused within a plan. A

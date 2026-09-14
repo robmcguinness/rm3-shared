@@ -7,4 +7,5 @@ for the message. If it cannot, or the skill is missing, use its format anyway:
 The scope is the subsystem this unit touched. The WHY is the goal stated in
 {{PLANS_DIR}}/{{CODENAME}}-unit-{{UNIT}}.md — not a restatement of the diff.
 Do not push. End with exactly one line, echoing the tag exactly:
-RM3-ORC[{{TAG}}]: SUCCESS — committed <short-hash> — <one line the next unit's coder must know, or "no handoff">
+RM3-ORC[{{TAG}}]: SUCCESS — <one line the next unit's coder must know, or "no handoff"> — committed <short-hash>
+The hash comes last so the orchestrator can tell where the line ends.

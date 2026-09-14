@@ -18,10 +18,12 @@ UNIT_FILE=$1; SENTINEL=$2
 HERE=$(cd "$(dirname "$0")" && pwd)
 [ -f "$UNIT_FILE" ] || { echo "no unit file $UNIT_FILE" >&2; exit 1; }
 
-# 1. parse the sentinel: RM3-ORC[tag]: SUCCESS — committed <hash> — <handoff>
+# 1. parse the sentinel: RM3-ORC[tag]: SUCCESS — <handoff> — committed <hash>
+#    The hash is last on purpose: turn.sh joins a wrapped sentinel until it sees
+#    "committed", so free text after the hash would be cut off.
 HASH=$(printf '%s' "$SENTINEL" | grep -oE 'committed [0-9a-f]{7,40}' | head -1 | cut -d' ' -f2 || true)
 [ -n "$HASH" ] || { echo "sentinel carries no 'committed <hash>': $SENTINEL" >&2; exit 1; }
-HANDOFF=$(printf '%s' "$SENTINEL" | perl -ne 'print $1 if /committed [0-9a-f]+\s*[—-]+\s*(.*)$/')
+HANDOFF=$(printf '%s' "$SENTINEL" | perl -ne 'print $1 if /SUCCESS\s*[—-]+\s*(.*?)\s*[—-]+\s*committed [0-9a-f]+/')
 HANDOFF=${HANDOFF:-no handoff}
 case "$HANDOFF" in "no handoff"*|"none"|"") HANDOFF="no handoff" ;; esac
 
