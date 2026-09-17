@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@rm3/lint": "workspace:*",
+    "@shadcn/lint": "0.1.0",
     "eslint-plugin-perfectionist": "^5.10.1",
     "oxlint-plugin-react-doctor": "0.9.13"
   },

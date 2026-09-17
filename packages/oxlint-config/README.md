@@ -28,7 +28,7 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `reactDoctorRulesOff`             | recommended react-doctor rules rm3 turns off, each restating a decision `rm3Config` already made                                                              |
 | `reactDoctorFrameworkRules`       | react-doctor's per-framework rules, keyed `nextjs`, `preact`, `react-native`, `tanstack-query`, `tanstack-start`                                              |
 | `reactDoctorCapabilityRules`      | react-doctor rules gated on the environment, keyed `ssr`, `react-compiler`, `i18n` — spread after `reactDoctorRules`                                          |
-| `shadcnRulesOff`                  | `antiSlopRulesOff` plus the style rules vendored shadcn primitives trip                                                                                       |
+| `shadcnRulesOff`                  | `antiSlopRulesOff`, the style rules vendored shadcn primitives trip, every `rm3-shadcn` rule, and the three `shadcn/*` rules `@shadcn/lint` turns off there   |
 | `nodeRules`                       | already in `rm3Config`; `nodeRulesOn` plus `nodeRulesOff`, exported for overrides that set their own `plugins`                                                |
 | `nodeRulesOn`                     | Node rules from the off `style`, `restriction` and `nursery` categories plus the seven `rm3-node` plugin rules, opted in by name                              |
 | `nodeRulesOff`                    | Node rules turned off on purpose, each with a reason                                                                                                          |
@@ -36,12 +36,11 @@ consumer. The consumer calls `defineConfig` with its own oxlint.
 | `restrictedImportPaths`           | the `no-restricted-imports` list (packages a Node built-in replaces); extend it in an override rather than restating it                                       |
 | `rm3NodeJsPlugin`                 | already in `rm3Config`; the `rm3-node` jsPlugin entry, exported for overrides that set their own `plugins`                                                    |
 | `nodeCustomRules`                 | the seven `rm3-node` plugin rules at `error`, re-exported from `@rm3/lint/node`                                                                               |
-| `tailwindRulesOn`                 | already in `rm3Config`; the two `rm3-tailwind` plugin rules                                                                                                   |
-| `rm3TailwindJsPlugin`             | already in `rm3Config`; the `rm3-tailwind` jsPlugin entry, exported for overrides that set their own `plugins`                                                |
-| `tailwindCustomRules`             | the two `rm3-tailwind` plugin rules at `error`, re-exported from `@rm3/lint/tailwind`                                                                         |
-| `shadcnRulesOn`                   | already in `rm3Config`; the twenty-one `rm3-shadcn` plugin rules                                                                                              |
+| `shadcnLintRulesOn`               | already in `rm3Config`; the six `@shadcn/lint` rules with their options                                                                                       |
+| `shadcnLintJsPlugin`              | already in `rm3Config`; the `@shadcn/lint` jsPlugin entry (`shadcn/*`), exported for overrides that set their own `plugins`                                   |
+| `shadcnRulesOn`                   | already in `rm3Config`; the twenty `rm3-shadcn` plugin rules                                                                                                  |
 | `rm3ShadcnJsPlugin`               | already in `rm3Config`; the `rm3-shadcn` jsPlugin entry, exported for overrides that set their own `plugins`                                                  |
-| `shadcnCustomRules`               | the twenty-one `rm3-shadcn` plugin rules at `error`, re-exported from `@rm3/lint/shadcn`                                                                      |
+| `shadcnCustomRules`               | the twenty `rm3-shadcn` plugin rules at `error`, re-exported from `@rm3/lint/shadcn`                                                                          |
 | `fastifyRulesOn`                  | already in `rm3Config`; the five `rm3-fastify` plugin rules                                                                                                   |
 | `rm3FastifyJsPlugin`              | already in `rm3Config`; the `rm3-fastify` jsPlugin entry, exported for overrides that set their own `plugins`                                                 |
 | `fastifyCustomRules`              | the five `rm3-fastify` plugin rules at `error`, re-exported from `@rm3/lint/fastify`                                                                          |
@@ -140,51 +139,76 @@ rules: {
 },
 ```
 
-## Tailwind rules
+## @shadcn/lint rules
 
-`tailwindRulesOn` turns two Tailwind practices into ratchets, both from the `rm3-tailwind` plugin in `@rm3/lint` (see `packages/lint/README.md`):
+`shadcnLintRulesOn` turns on the six rules of [`@shadcn/lint`](https://github.com/shadcn-ui/lint),
+a project-aware linter for Tailwind design systems. The plugin reads the nearest `components.json`
+(the `ui` alias, the theme CSS and its `@theme` colors), the `cva` / `tv` variants and typed props of
+each component, and the installed Tailwind v4, and its messages name the token, scale value or
+variant to use instead. All six are at `error`:
 
-- `rm3-tailwind/no-arbitrary-values`: no `bg-[#fff]` / `p-[13px]` outside `h-`, `w-`, `min-h-`,
-  `max-h-`, `min-w-`, `max-w-`. Tokens live in `@theme`. Arbitrary variants such as
-  `data-[state=open]:` are not values and pass.
-- `rm3-tailwind/no-dynamic-class-names`: no `bg-${color}-600` or `'text-' + size`; Tailwind only
-  emits classes it finds whole in source.
+- `shadcn/no-restyle` (`allow: ['layout']`): a non-layout class on a design-system component
+  (`<Button className="p-4 bg-pink-500">`). Margin, width, position and display pass; padding,
+  color, typography, shape, effects and motion report, and the message lists the component's
+  variants and sizes. Only components resolved from the `ui` directory (through re-exports and
+  `className`-forwarding wrappers) are checked; a plain `div` is not in scope.
+- `shadcn/no-raw-colors`: `bg-blue-500`, `text-gray-600`, a token the theme does not declare
+  (`bg-highlight`), and a literal SVG `fill` / `stroke`. The message lists the declared tokens
+  and the nearest one by color.
+- `shadcn/no-arbitrary-values` (`allow: ['layout']`): `p-[13px]`, `rounded-[10px]`, `bg-[#333]`;
+  the message names the on-scale replacement (`p-3.25`). `w-[320px]` passes under `layout`.
+  Arbitrary variants (`data-[state=open]:`) and the variable shorthand (`bg-(--brand)`) are not
+  values.
+- `shadcn/no-inline-styles`: `style={{ color: ... }}` and `<style>`. A dynamic value goes through
+  a CSS custom property (`style={{ '--w': width }}` with `w-(--w)`).
+- `shadcn/no-unknown-classes`: a class the project's Tailwind cannot generate (`flex-cols`,
+  `hovr:flex`), with a spelling suggestion. Runs the installed Tailwind in a worker thread; if it
+  or the theme cannot load, the rule warns once on stderr and falls back to a grammar that checks
+  less. Classes from a stylesheet outside the theme's import graph need an `allow` entry.
+- `shadcn/require-static-classes`: a class value on a design-system component the linter cannot
+  read (`` `bg-${color}` ``, an imported constant, an unknown call).
 
-Both are on for every file and match only `className` / `class` attributes and the class helpers
-(`cn`, `clsx`, `cva`, `twMerge`, `tv`, `twJoin`), so a Node file pays nothing. `shadcnRulesOff`
-turns both off: upstream primitives use `rounded-[...]` and `transition-[...]`.
+`shadcnRulesOff` turns `no-restyle`, `no-arbitrary-values` and `require-static-classes` off, the
+same three the plugin's own adoption guide turns off over `components/ui`: the primitives own
+their appearance, use `ring-[3px]`, and build classes from their variant functions. The other
+three keep checking the primitives.
 
-A consumer that needs structural arbitrary values widens the allowlist in its own override; the
-override replaces the rule's options, so restate the defaults:
+A consumer that widens an option restates it whole; an override replaces the rule's options, it
+does not merge them:
 
 ```ts
 rules: {
-    'rm3-tailwind/no-arbitrary-values': [
+    'shadcn/no-arbitrary-values': ['error', { allow: ['layout', 'grid-cols-*'] }],
+    'shadcn/no-restyle': [
         'error',
-        { allow: ['h-', 'w-', 'min-h-', 'max-h-', 'min-w-', 'max-w-', 'grid-cols-', 'transition-'] },
+        { allow: ['layout'], contracts: [{ pattern: '^CardTitle$', allow: ['layout', 'typography'] }] },
     ],
 },
 ```
 
-The skill's other practices are not lint rules: `@apply` lives in CSS, which oxlint does not
-read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
+`settings.shadcn` (`ui` for a component directory `components.json` does not name,
+`componentImports`, `ignoreImports`, `mergeFunctions`, `variantFunctions`, `note`) is not
+inherited through `extends` under oxlint, so it goes in the consumer's own root config. Neither
+rm3 consumer needs it: both have a `components.json` whose `ui` alias resolves through
+tsconfig `paths` or package `imports`.
+
+The skill's other Tailwind practices are not lint rules: `@apply` lives in CSS, which oxlint does
+not read, and class sorting belongs to `oxfmt` (`sortTailwindcss`), not the linter.
 
 ## shadcn rules
 
-`shadcnRulesOn` turns the twenty-one practices from the global `shadcn` skill's `rules/*.md` that
+`shadcnRulesOn` turns the twenty practices from the global `shadcn` skill's `rules/*.md` that
 a linter can decide into ratchets, all from the `rm3-shadcn` plugin in `@rm3/lint` (see
-`packages/lint/README.md` for what each one matches). They are shadcn's opinions about app code that composes the primitives, kept apart
-from `rm3-tailwind` because the two disagree on `dark:` (Tailwind endorses the variant; shadcn
-routes theme differences through semantic tokens).
+`packages/lint/README.md` for what each one matches). They are shadcn's opinions about app code
+that composes the primitives. Raw colors, arbitrary values and unreadable class strings are
+`@shadcn/lint`'s rules above, which know the project's theme; these know only the file.
 
-Class-string rules, matching `className` / `class` and the class helpers like the Tailwind rules:
+Class-string rules, matching `className` / `class` and the class helpers (`cn`, `clsx`, `cva`,
+`twMerge`, `tv`, `twJoin`):
 
 - `rm3-shadcn/no-space-utilities`: no `space-x-*` / `space-y-*`; `flex gap-*`.
 - `rm3-shadcn/prefer-size-utility`: `w-10 h-10` in one string is `size-10`.
 - `rm3-shadcn/prefer-truncate`: `overflow-hidden text-ellipsis whitespace-nowrap` is `truncate`.
-- `rm3-shadcn/no-palette-colors`: no `bg-blue-500`, `text-gray-600`, `text-white`; semantic
-  tokens (`bg-primary`, `text-muted-foreground`) or a `@theme` color. `['error', { allow:
-['white'] }]` permits a value.
 - `rm3-shadcn/no-dark-color-overrides`: no `dark:bg-gray-950`; the semantic token already
   carries a dark value. `dark:bg-success/20` (a token tweak) passes unless `strict: true`.
 - `rm3-shadcn/no-conditional-class-template`: no `${open ? "a" : "b"}` inside a `className`
@@ -254,8 +278,8 @@ Base rules, keyed on the `base` in `components.json`:
   keyboard handling a non-button needs. `TooltipTrigger` and the `SidebarMenu*` buttons have no
   such prop and are not in scope.
 
-All twenty-one are on for every file and match only JSX and the class helpers, so a Node file
-pays nothing. `shadcnRulesOff` turns all twenty-one off: the primitives themselves use `dark:`
+All twenty are on for every file and match only JSX and the class helpers, so a Node file
+pays nothing. `shadcnRulesOff` turns all twenty off: the primitives themselves use `dark:`
 palette variants, `z-50` on their own overlays, `animate-pulse` in `Skeleton`, and compose their
 own parts.
 

@@ -60,42 +60,24 @@ The four log rules match pino-shaped calls only: a level method (`trace`..`fatal
 call. A `??` / `||` between any of those logger shapes is also matched. `console.*` and a
 `.child()` result are not matched.
 
-`src/tailwind.ts` (the `@rm3/lint/tailwind` export) is a third plugin, `rm3-tailwind`, for the two
-Tailwind practices a linter can check from class strings alone. Also kept apart from
-`anti-slop`; `shadcnRulesOff` in `@rm3/oxlint-config` turns both off by name over vendored
-primitives.
-
-- `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-tailwind` jsPlugin
-  by `@rm3/oxlint-config`.
-- `tailwindCustomRules` — the two rules at `error`.
-
-| rule                     | reports                                                                                                                                                                                                                                                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `no-arbitrary-values`    | `bg-[#fff]`, `p-[13px]`, `[mask-type:luminance]` in a class string, unless the utility prefix is in `allow` (default `h-`, `w-`, `min-h-`, `max-h-`, `min-w-`, `max-w-`). Arbitrary variants (`data-[state=open]:`) and the v4 variable shorthand (`bg-(--brand)`) are not values. Modifiers (`/[0.37]`) are ignored. |
-| `no-dynamic-class-names` | A `${}` or `+` glued to text inside a class string: `bg-${color}-600`, `'text-' + size`. Whole-token interpolation (`${base} ${extra}`) passes.                                                                                                                                                                       |
-
-Both look at JSX `className`/`class` attributes and at string arguments to the class helpers in
-`callees` (default `cn`, `clsx`, `cva`, `twMerge`, `tv`, `twJoin`), recursing through arrays,
-object keys and values, ternaries, logical expressions and TypeScript casts. A template literal
-tagged with a callee (`tw\`...\``) counts too.
-
-`src/shadcn.ts` (the `@rm3/lint/shadcn` export) is a fourth plugin, `rm3-shadcn`, for the
-twenty-one practices in the global `shadcn` skill's `rules/*.md` (`styling.md`, `forms.md`,
+`src/shadcn.ts` (the `@rm3/lint/shadcn` export) is a third plugin, `rm3-shadcn`, for the
+twenty practices in the global `shadcn` skill's `rules/*.md` (`styling.md`, `forms.md`,
 `composition.md`, `icons.md`, `chat.md`, `base-vs-radix.md`) that are decidable from JSX and class
-strings. Kept apart from `rm3-tailwind` because they are shadcn's opinions about composing the
-primitives, not Tailwind's;
-`shadcnRulesOff` turns all twenty-one off over vendored primitives.
+strings. They are shadcn's opinions about composing the primitives. Raw palette colors, arbitrary
+values and class strings a linter cannot read are left to
+[`@shadcn/lint`](https://github.com/shadcn-ui/lint), which `@rm3/oxlint-config` loads alongside
+this plugin and which reads the project's `components.json`, theme and variants.
+`shadcnRulesOff` turns all twenty off over vendored primitives.
 
 - `default` — the `eslintCompatPlugin`-wrapped plugin, registered as the `rm3-shadcn` jsPlugin
   by `@rm3/oxlint-config`.
-- `shadcnCustomRules` — the twenty-one rules at `error`.
+- `shadcnCustomRules` — the twenty rules at `error`.
 
 | rule                            | reports                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `no-space-utilities`            | A `space-x-*` / `space-y-*` token (including `-reverse`) in a class string.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `prefer-size-utility`           | A `w-<v>` and `h-<v>` with the same value and the same variant chain in one literal or template chunk (`md:w-4 md:h-4`; not `w-4 md:h-4`, not `w-4` and `h-4` in two `cn` arguments). `screen` has no `size-` form and passes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `prefer-truncate`               | `overflow-hidden`, `text-ellipsis` and `whitespace-nowrap` under the same variant chain in one literal or chunk.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `no-palette-colors`             | A color utility (`bg-`, `text-`, `border-*`, `ring-`, `fill-`, `from-`, `shadow-`, …) whose value is a default palette color (`blue-500`, `gray-50`, `white`, `black`). Semantic tokens (`bg-primary`, `bg-success/20`, `bg-brand-500`) pass. A token under `dark:` is `no-dark-color-overrides`' business. `allow` lists values to permit.                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `no-dark-color-overrides`       | A `dark:` variant on a color utility with a palette value (`dark:bg-gray-950`, `dark:text-white`). With `strict: true`, any `dark:` color utility, including a semantic token.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `no-conditional-class-template` | A `ConditionalExpression` or `LogicalExpression` interpolated into a `className` template or `+` chain. Only the JSX attribute; a helper call like `cn(\`…\`)` is not read.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `no-ungrouped-items`            | An item (`SelectItem`, `SelectLabel`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSub`, `MenubarItem`, `ContextMenuItem`, `CommandItem`, `TabsTrigger`, `MessageScrollerItem`) whose nearest enclosing JSX element is its content container rather than its Group. The walk looks through fragments, `{cond && …}` and `.map()` callbacks, and stops at a prop (`render={…}`).                                                                                                                                                                                                                                                                                                                                                        |
@@ -116,14 +98,15 @@ primitives, not Tailwind's;
 
 An icon element is one with a `data-icon` attribute, a name in `iconNames` (default `Spinner`),
 a name ending in one of `iconSuffixes` (default `Icon`), or starting with one of `iconPrefixes`
-(default none; Tabler sets `['Icon']`). The class-string rules take the same `callees` option as
-the Tailwind rules.
+(default none; Tabler sets `['Icon']`). The class-string rules take a `callees` option naming the
+class helpers whose string arguments are read (default `cn`, `clsx`, `cva`, `twMerge`, `tv`,
+`twJoin`).
 
 The chat rows of `composition.md`'s group table (`Message` in `MessageGroup`, `Bubble` in
 `BubbleGroup`, `Attachment` in `AttachmentGroup`) are not in `no-ungrouped-items`: they have no
 forbidden container, only a "two or more siblings" condition that a `.map()` hides.
 
-`src/fastify.ts` (the `@rm3/lint/fastify` export) is a fifth plugin, `rm3-fastify`, for the
+`src/fastify.ts` (the `@rm3/lint/fastify` export) is a fourth plugin, `rm3-fastify`, for the
 practices in the `fastify-best-practices` skill a linter can decide from the call shape. Kept
 apart from `rm3-node` because the rules key on Fastify's API rather than on Node.
 

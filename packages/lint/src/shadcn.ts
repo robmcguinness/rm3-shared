@@ -6,7 +6,6 @@ import { noConditionalClassTemplateRule } from './rules/no-conditional-class-tem
 import { noDarkColorOverridesRule } from './rules/no-dark-color-overrides.ts';
 import { noIconSizeClassesRule } from './rules/no-icon-size-classes.ts';
 import { noOverlayZIndexRule } from './rules/no-overlay-z-index.ts';
-import { noPaletteColorsRule } from './rules/no-palette-colors.ts';
 import { noPositionedInputAddonRule } from './rules/no-positioned-input-addon.ts';
 import { noRawInputInInputGroupRule } from './rules/no-raw-input-in-input-group.ts';
 import { noSpaceUtilitiesRule } from './rules/no-space-utilities.ts';
@@ -24,10 +23,12 @@ import { requirePartsRule } from './rules/require-parts.ts';
 
 /**
  * shadcn/ui rules, one per practice in the global `shadcn` skill's
- * `rules/*.md` a linter can check from JSX and class strings. A separate
- * plugin from `rm3-tailwind` because these are shadcn's opinions (no `dark:` color
- * overrides, component composition), not Tailwind's; `shadcnRulesOff` in
- * `@rm3/oxlint-config` turns them off by name over vendored primitives.
+ * `rules/*.md` a linter can check from JSX and class strings. These are
+ * shadcn's opinions about composing the primitives (no `dark:` color
+ * overrides, items in their Group); raw colors, arbitrary values and
+ * unreadable class strings are `@shadcn/lint`'s business, which reads the
+ * project's theme and components. `shadcnRulesOff` in `@rm3/oxlint-config`
+ * turns these off by name over vendored primitives.
  */
 const rm3ShadcnPlugin = eslintCompatPlugin({
   meta: { name: 'rm3-shadcn' },
@@ -38,7 +39,6 @@ const rm3ShadcnPlugin = eslintCompatPlugin({
     'no-dark-color-overrides': noDarkColorOverridesRule,
     'no-icon-size-classes': noIconSizeClassesRule,
     'no-overlay-z-index': noOverlayZIndexRule,
-    'no-palette-colors': noPaletteColorsRule,
     'no-positioned-input-addon': noPositionedInputAddonRule,
     'no-raw-input-in-input-group': noRawInputInInputGroupRule,
     'no-space-utilities': noSpaceUtilitiesRule,
@@ -68,7 +68,6 @@ export const shadcnCustomRules: {
   'rm3-shadcn/no-dark-color-overrides': 'error';
   'rm3-shadcn/no-icon-size-classes': 'error';
   'rm3-shadcn/no-overlay-z-index': 'error';
-  'rm3-shadcn/no-palette-colors': 'error';
   'rm3-shadcn/no-positioned-input-addon': 'error';
   'rm3-shadcn/no-raw-input-in-input-group': 'error';
   'rm3-shadcn/no-space-utilities': 'error';
@@ -96,8 +95,6 @@ export const shadcnCustomRules: {
   'rm3-shadcn/no-icon-size-classes': 'error',
   // styling.md: overlay primitives manage their own stacking.
   'rm3-shadcn/no-overlay-z-index': 'error',
-  // styling.md: semantic tokens, never the raw palette.
-  'rm3-shadcn/no-palette-colors': 'error',
   // forms.md: an addon over an `Input` is `InputGroup` + `InputGroupAddon`.
   'rm3-shadcn/no-positioned-input-addon': 'error',
   // forms.md: `InputGroup` takes `InputGroupInput` / `InputGroupTextarea`.

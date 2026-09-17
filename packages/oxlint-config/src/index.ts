@@ -8,7 +8,6 @@ import { antiSlopRules, antiSlopRulesOff, complexityRules } from '@rm3/lint';
 import { fastifyCustomRules } from '@rm3/lint/fastify';
 import { nodeCustomRules } from '@rm3/lint/node';
 import { shadcnCustomRules } from '@rm3/lint/shadcn';
-import { tailwindCustomRules } from '@rm3/lint/tailwind';
 // The `core` entry is rule metadata only (31 ms to import); the root entry is
 // the plugin itself, which oxlint loads through `reactDoctorJsPlugin` below.
 import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
@@ -20,7 +19,6 @@ export {
   fastifyCustomRules,
   nodeCustomRules,
   shadcnCustomRules,
-  tailwindCustomRules,
 };
 
 /**
@@ -161,6 +159,17 @@ export const reactRules = {
 export const reactDoctorJsPlugin = {
   name: 'react-doctor',
   specifier: import.meta.resolve('oxlint-plugin-react-doctor'),
+} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
+
+/**
+ * `@shadcn/lint`, resolved HERE like `perfectionist` so the pinned copy in
+ * rm3-shared/node_modules loads even through a `link:` symlink. Already in
+ * `rm3Config.jsPlugins`. `name` is the plugin's own `meta.name`, so its rule
+ * ids read `shadcn/no-restyle` as in its docs.
+ */
+export const shadcnLintJsPlugin = {
+  name: 'shadcn',
+  specifier: import.meta.resolve('@shadcn/lint'),
 } satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
 
 /**
@@ -356,16 +365,6 @@ export const reactDoctorCapabilityRules: Record<EnvironmentCapability, ReactDoct
 export const rm3NodeJsPlugin = {
   name: 'rm3-node',
   specifier: import.meta.resolve('@rm3/lint/node'),
-} satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
-
-/**
- * The `rm3-tailwind` plugin from `@rm3/lint`, resolved HERE for the same
- * reason as `rm3NodeJsPlugin`. Already in `rm3Config.jsPlugins`; exported for
- * the test and for consumer overrides.
- */
-export const rm3TailwindJsPlugin = {
-  name: 'rm3-tailwind',
-  specifier: import.meta.resolve('@rm3/lint/tailwind'),
 } satisfies NonNullable<OxlintConfig['jsPlugins']>[number];
 
 /**
@@ -589,23 +588,44 @@ export const nodeTestRulesOff = {
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
- * The two `rm3-tailwind` plugin rules, the Tailwind practices a linter can
- * check from class strings alone. On for every file: they match `className` and
- * `cn`/`cva` calls, so a Node file pays nothing. Neither rule has an oxlint
- * counterpart.
+ * The six `@shadcn/lint` rules: Tailwind design-system policy that needs the
+ * project, which the plugin reads from the nearest `components.json` (the
+ * `ui` alias, the theme CSS and its `@theme` colors, `cva` variants, the
+ * installed Tailwind). On for every file: each visits `className` and the
+ * class helpers only, and discovery is lazy per site, so a Node file pays
+ * nothing. `shadcnRulesOff` turns the three the plugin's own adoption guide
+ * turns off over `components/ui`.
+ *
+ * `settings.shadcn` (`ui`, `componentImports`, `mergeFunctions`, `note`) is
+ * not inherited through `extends` under oxlint, so a consumer that needs it
+ * sets `settings` in its own root config; none is set here.
  */
-export const tailwindRulesOn = {
-  // No arbitrary values (`bg-[#fff]`, `p-[13px]`) outside the height and
-  // width utilities; tokens live in `@theme`. Widen the allowlist in a
-  // consumer override with `['error', { allow: ['grid-cols-'] }]`.
-  'rm3-tailwind/no-arbitrary-values': tailwindCustomRules['rm3-tailwind/no-arbitrary-values'],
-  // `bg-${color}-600` is never emitted; Tailwind only generates classes it
-  // finds whole in source.
-  'rm3-tailwind/no-dynamic-class-names': tailwindCustomRules['rm3-tailwind/no-dynamic-class-names'],
+export const shadcnLintRulesOn = {
+  // `p-[13px]`, `rounded-[10px]`, `bg-[#333]`; the message names the
+  // on-scale replacement. `layout` allows `w-[320px]` and friends. A consumer
+  // widening this restates `layout`: options replace, they do not merge.
+  'shadcn/no-arbitrary-values': ['error', { allow: ['layout'] }],
+  // `style={{ color }}` and `<style>`; a dynamic value goes through a CSS
+  // custom property and a `w-(--x)` class.
+  'shadcn/no-inline-styles': 'error',
+  // `bg-blue-500`, an undeclared `bg-highlight`, a literal SVG `fill`; the
+  // message lists the theme's tokens and the nearest one by color.
+  'shadcn/no-raw-colors': 'error',
+  // A non-layout class on a design-system component (`<Button className="p-4">`);
+  // the message lists the component's variants and sizes. Contracts per
+  // component go in a consumer override.
+  'shadcn/no-restyle': ['error', { allow: ['layout'] }],
+  // A class the project's Tailwind cannot generate (`flex-cols`, `hovr:flex`).
+  // Runs the installed Tailwind v4 in a worker; without one it falls back to a
+  // grammar and warns once.
+  'shadcn/no-unknown-classes': 'error',
+  // A class value on a design-system component the linter cannot read
+  // (`bg-${color}`, an imported constant, an unknown call).
+  'shadcn/require-static-classes': 'error',
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 /**
- * The twenty-one `rm3-shadcn` plugin rules, each a practice from the global
+ * The twenty `rm3-shadcn` plugin rules, each a practice from the global
  * `shadcn` skill's `rules/*.md` a linter can check from JSX and class
  * strings. On for
  * every file: they match `className`, the class helpers and shadcn component
@@ -633,9 +653,6 @@ export const shadcnRulesOn = {
   // styling.md: `z-50` on `DialogContent`, `PopoverContent` and the other
   // overlay surfaces; the primitives stack themselves.
   'rm3-shadcn/no-overlay-z-index': shadcnCustomRules['rm3-shadcn/no-overlay-z-index'],
-  // styling.md: `bg-blue-500`, `text-gray-600`, `text-white`; semantic tokens
-  // only. Widen with `['error', { allow: ['white'] }]`.
-  'rm3-shadcn/no-palette-colors': shadcnCustomRules['rm3-shadcn/no-palette-colors'],
   // forms.md: a `relative` wrapper with an `absolute` button or icon over an
   // `Input`; `InputGroup` + `InputGroupAddon`.
   'rm3-shadcn/no-positioned-input-addon': shadcnCustomRules['rm3-shadcn/no-positioned-input-addon'],
@@ -742,10 +759,6 @@ export const shadcnRulesOff = {
   'perfectionist/sort-jsx-props': 'off',
   'perfectionist/sort-object-types': 'off',
   'perfectionist/sort-objects': 'off',
-  // Upstream primitives use `rounded-[...]`, `transition-[...]`,
-  // `[&_svg]:size-[...]`, and a few build class names from props.
-  'rm3-tailwind/no-arbitrary-values': 'off',
-  'rm3-tailwind/no-dynamic-class-names': 'off',
   // Upstream primitives use `dark:` palette variants, `space-*`, sized `svg`
   // selectors, `z-50` on their own overlays, and compose their own parts.
   // Every rm3-shadcn rule describes app code composing the primitives, not
@@ -756,7 +769,6 @@ export const shadcnRulesOff = {
   'rm3-shadcn/no-dark-color-overrides': 'off',
   'rm3-shadcn/no-icon-size-classes': 'off',
   'rm3-shadcn/no-overlay-z-index': 'off',
-  'rm3-shadcn/no-palette-colors': 'off',
   'rm3-shadcn/no-positioned-input-addon': 'off',
   'rm3-shadcn/no-raw-input-in-input-group': 'off',
   'rm3-shadcn/no-space-utilities': 'off',
@@ -771,6 +783,13 @@ export const shadcnRulesOff = {
   'rm3-shadcn/require-icon-data-icon': 'off',
   'rm3-shadcn/require-native-button-false': 'off',
   'rm3-shadcn/require-parts': 'off',
+  // `@shadcn/lint`'s own component-directory override: the primitives own
+  // their appearance, use `ring-[3px]` and `[&_svg]:size-[...]`, and build
+  // classes from their variant functions. `no-raw-colors`, `no-inline-styles`
+  // and `no-unknown-classes` stay on over them.
+  'shadcn/no-arbitrary-values': 'off',
+  'shadcn/no-restyle': 'off',
+  'shadcn/require-static-classes': 'off',
 } satisfies NonNullable<OxlintConfig['rules']>;
 
 export const rm3Config: OxlintConfig = {
@@ -811,10 +830,10 @@ export const rm3Config: OxlintConfig = {
       specifier: import.meta.resolve('@rm3/lint'),
     },
     rm3NodeJsPlugin,
-    rm3TailwindJsPlugin,
     rm3ShadcnJsPlugin,
     rm3FastifyJsPlugin,
     reactDoctorJsPlugin,
+    shadcnLintJsPlugin,
   ],
   options: {
     // tsgolint type-aware rules, plus TypeScript compiler diagnostics. Both are
@@ -1038,8 +1057,8 @@ export const rm3Config: OxlintConfig = {
 
     // --- Node (on for every file; the rules match Node APIs and imports) ---
     ...nodeRules,
-    // --- Tailwind ---
-    ...tailwindRulesOn,
+    // --- Tailwind design-system policy (@shadcn/lint) ---
+    ...shadcnLintRulesOn,
     // --- shadcn (from the global shadcn skill's rules) ---
     ...shadcnRulesOn,
     // --- Fastify (fastify-best-practices skill) ---

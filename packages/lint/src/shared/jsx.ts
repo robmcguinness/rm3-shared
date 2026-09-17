@@ -351,7 +351,7 @@ function walkAttributeClassExpression(
  * The static class tokens of an element's `className` / `class` attribute:
  * from the literal, from every static chunk of a template, and from the
  * arguments of any helper call. Interpolated parts are
- * `no-dynamic-class-names`' business and are skipped.
+ * `shadcn/require-static-classes`' business and are skipped.
  */
 export function classTokensOf(node: ESTree.JSXOpeningElement): ClassToken[] {
   const tokens: ClassToken[] = [];

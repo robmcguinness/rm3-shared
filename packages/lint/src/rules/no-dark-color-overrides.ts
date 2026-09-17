@@ -3,14 +3,13 @@ import { defineRule } from '@oxlint/plugins';
 import {
   createClassValueVisitor,
   DEFAULT_CALLEES,
+  hasDarkVariant,
   readBooleanOption,
   readStringArrayOption,
   staticTokenGroups,
   utilityOf,
 } from '#shared/class-strings.ts';
 import { isColorUtility, paletteColorOf } from '#shared/palette-colors.ts';
-
-import { hasDarkVariant } from './no-palette-colors.ts';
 
 interface Options {
   isCallee: (name: string) => boolean;

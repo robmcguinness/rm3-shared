@@ -263,12 +263,12 @@ export function createClassValueVisitor(
   };
 }
 
-export function splitClassTokens(value: string): string[] {
+function splitClassTokens(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
 }
 
 /** The text of a template chunk; `cooked` is null for an invalid escape. */
-export function quasiText(element: ESTree.TemplateElement): string {
+function quasiText(element: ESTree.TemplateElement): string {
   return element.value.cooked ?? element.value.raw;
 }
 
@@ -295,6 +295,11 @@ function lastTopLevelIndex(text: string, char: string): number {
  */
 export function variantPrefixOf(token: string): string {
   return token.slice(0, lastTopLevelIndex(token, ':') + 1);
+}
+
+/** Whether a `dark:` variant sits anywhere in the token's variant chain. */
+export function hasDarkVariant(token: string): boolean {
+  return variantPrefixOf(token).split(':').includes('dark');
 }
 
 /**

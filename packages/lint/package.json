@@ -23,10 +23,6 @@
     "./shadcn": {
       "source": "./src/shadcn.ts",
       "default": "./src/shadcn.ts"
-    },
-    "./tailwind": {
-      "source": "./src/tailwind.ts",
-      "default": "./src/tailwind.ts"
     }
   },
   "scripts": {

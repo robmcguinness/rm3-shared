@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { describe, test } from 'node:test';
 
+import shadcnLintPlugin from '@shadcn/lint';
 import reactDoctorPlugin, {
   NEXTJS_RULES,
   PREACT_RULES,
@@ -17,7 +18,6 @@ import { REACT_DOCTOR_RULES } from 'oxlint-plugin-react-doctor/core';
 import rm3FastifyPlugin from '@rm3/lint/fastify';
 import rm3NodePlugin from '@rm3/lint/node';
 import rm3ShadcnPlugin from '@rm3/lint/shadcn';
-import rm3TailwindPlugin from '@rm3/lint/tailwind';
 
 import {
   fastifyRulesOn,
@@ -37,10 +37,10 @@ import {
   rm3FastifyJsPlugin,
   rm3NodeJsPlugin,
   rm3ShadcnJsPlugin,
-  rm3TailwindJsPlugin,
+  shadcnLintJsPlugin,
+  shadcnLintRulesOn,
   shadcnRulesOff,
   shadcnRulesOn,
-  tailwindRulesOn,
 } from './index.ts';
 
 /** oxlint scope names use underscores, plugin names do not. */
@@ -383,45 +383,58 @@ describe('nodeRules', () => {
   });
 });
 
-describe('tailwindRules', () => {
-  const RM3_TAILWIND_PREFIX = 'rm3-tailwind/';
+describe('shadcnLintRules', () => {
+  const SHADCN_LINT_PREFIX = 'shadcn/';
+  // The plugin's own adoption guide turns these off over `components/ui`:
+  // the primitives own their appearance and build classes from their variant
+  // functions. The other three keep checking the primitives.
+  const OFF_OVER_PRIMITIVES = new Set([
+    'no-arbitrary-values',
+    'no-restyle',
+    'require-static-classes',
+  ]);
 
-  test('names only rules the rm3-tailwind plugin registers', () => {
-    for (const key of Object.keys(tailwindRulesOn)) {
-      assert.ok(key.startsWith(RM3_TAILWIND_PREFIX), `${key} is not an rm3-tailwind rule`);
+  test('names only rules the @shadcn/lint plugin registers', () => {
+    for (const key of Object.keys(shadcnLintRulesOn)) {
+      assert.ok(key.startsWith(SHADCN_LINT_PREFIX), `${key} is not a @shadcn/lint rule`);
       assert.ok(
-        key.slice(RM3_TAILWIND_PREFIX.length) in rm3TailwindPlugin.rules,
-        `${key} is not an rm3-tailwind plugin rule`,
+        key.slice(SHADCN_LINT_PREFIX.length) in shadcnLintPlugin.rules,
+        `${key} is not a @shadcn/lint plugin rule`,
       );
     }
   });
 
-  test('names every rm3-tailwind plugin rule', () => {
-    for (const id of Object.keys(rm3TailwindPlugin.rules)) {
-      assert.ok(
-        `${RM3_TAILWIND_PREFIX}${id}` in tailwindRulesOn,
-        `rm3-tailwind/${id} is not enabled`,
-      );
+  test('names every @shadcn/lint plugin rule', () => {
+    for (const id of Object.keys(shadcnLintPlugin.rules)) {
+      assert.ok(`${SHADCN_LINT_PREFIX}${id}` in shadcnLintRulesOn, `shadcn/${id} is not enabled`);
     }
-    assert.equal(rm3TailwindJsPlugin.name, rm3TailwindPlugin.meta?.name);
-    assert.ok(rm3TailwindJsPlugin.specifier.startsWith('file://'));
-    assert.ok(
-      rm3Config.jsPlugins?.includes(rm3TailwindJsPlugin),
-      'rm3-tailwind is not in jsPlugins',
-    );
+    assert.equal(shadcnLintJsPlugin.name, shadcnLintPlugin.meta.name);
+    assert.ok(shadcnLintJsPlugin.specifier.startsWith('file://'));
+    assert.match(shadcnLintJsPlugin.specifier, /@shadcn\/lint/);
+    assert.ok(rm3Config.jsPlugins?.includes(shadcnLintJsPlugin), 'shadcn is not in jsPlugins');
   });
 
-  test('includes the Tailwind rules without shadowing decisions', () => {
-    for (const [key, setting] of Object.entries(tailwindRulesOn)) {
+  test('includes the @shadcn/lint rules without shadowing decisions', () => {
+    for (const [key, setting] of Object.entries(shadcnLintRulesOn)) {
       assert.deepEqual(rm3Config.rules?.[key], setting, `${key} missing`);
     }
   });
 
-  test('turns every rm3-tailwind rule off over vendored shadcn primitives', () => {
-    // The primitives use `rounded-[...]` and friends; `shadcn add` overwrites edits.
+  test('turns only the component-directory rules off over vendored shadcn primitives', () => {
     const off = new Map(Object.entries(shadcnRulesOff));
-    for (const id of Object.keys(rm3TailwindPlugin.rules)) {
-      assert.equal(off.get(`${RM3_TAILWIND_PREFIX}${id}`), 'off', `rm3-tailwind/${id} is on`);
+    for (const id of Object.keys(shadcnLintPlugin.rules)) {
+      const key = `${SHADCN_LINT_PREFIX}${id}`;
+      if (OFF_OVER_PRIMITIVES.has(id)) {
+        assert.equal(off.get(key), 'off', `${key} is on over the primitives`);
+      } else {
+        assert.equal(off.has(key), false, `${key} is off over the primitives`);
+      }
+    }
+  });
+
+  test('carries no rm3-tailwind rule, which @shadcn/lint replaced', () => {
+    for (const key of [...Object.keys(rm3Config.rules ?? {}), ...Object.keys(shadcnRulesOff)]) {
+      assert.equal(key.startsWith('rm3-tailwind/'), false, `${key} is a removed rm3-tailwind rule`);
     }
   });
 });

@@ -31,7 +31,7 @@ tester.run('rm3-shadcn/no-dark-color-overrides', noDarkColorOverridesRule, {
     '<div className="dark:border-border" />',
     // Non-color utilities under dark: are fine.
     '<div className="dark:opacity-80 dark:shadow-none dark:invert" />',
-    // Palette colors without dark: belong to no-palette-colors.
+    // Palette colors without dark: belong to `shadcn/no-raw-colors`.
     '<div className="bg-gray-950" />',
     '<div className="dark:bg-[#111]" />',
     // Not a class position.
